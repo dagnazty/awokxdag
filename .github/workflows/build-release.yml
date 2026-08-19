@@ -45,9 +45,13 @@ jobs:
             "TinyGPSPlus"
 
       - name: Compile (produces the merged image)
+        # -z muldefs lets our ieee80211_raw_frame_sanity_check override win over
+        # the one in libnet80211.a (a stock core has this empty; enabling raw
+        # deauth injection). The esp32 platform default carries this flag too.
         run: |
           arduino-cli compile \
             --fqbn "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled" \
+            --build-property "compiler.c.elf.extra_flags=-Wl,-z,muldefs" \
             --build-path build \
             AWOKxDAG/AWOKxDAG.ino
 
