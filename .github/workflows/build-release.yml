@@ -1,0 +1,82 @@
+name: Build & Release
+
+# Manually triggered from the Actions tab. Set the release version there.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.0.0)"
+        required: true
+        default: "1.0.0"
+      prerelease:
+        description: "Mark as pre-release?"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.3.10
+
+      - name: Install libraries
+        run: |
+          arduino-cli lib install \
+            "Adafruit GFX Library" \
+            "Adafruit ILI9341" \
+            "Adafruit BusIO" \
+            "NimBLE-Arduino" \
+            "XPT2046_Touchscreen" \
+            "TinyGPSPlus"
+
+      - name: Compile (produces the merged image)
+        run: |
+          arduino-cli compile \
+            --fqbn "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled" \
+            --build-path build \
+            AWOKxDAG/AWOKxDAG.ino
+
+      - name: Stage release artifacts
+        run: |
+          mkdir -p release
+          cp build/AWOKxDAG.ino.merged.bin     release/awokxdag-merged.bin
+          cp build/AWOKxDAG.ino.bin            release/awokxdag-app.bin
+          cp build/AWOKxDAG.ino.bootloader.bin release/bootloader.bin
+          cp build/AWOKxDAG.ino.partitions.bin release/partitions.bin
+          cp build/boot_app0.bin               release/boot_app0.bin
+          cd release
+          sha256sum * > SHA256SUMS
+          ls -la
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: AWOKxDAG v${{ inputs.version }}
+          prerelease: ${{ inputs.prerelease }}
+          body: |
+            AWOKxDAG v${{ inputs.version }} — ESP32-C5 firmware.
+
+            **Easiest flash:** write `awokxdag-merged.bin` to address `0x0`:
+            ```
+            esptool --chip esp32c5 write_flash 0x0 awokxdag-merged.bin
+            ```
+            Or use the individual images (`bootloader.bin` @ 0x2000,
+            `partitions.bin` @ 0x8000, `boot_app0.bin` @ 0xe000,
+            `awokxdag-app.bin` @ 0x10000). Verify with `SHA256SUMS`.
+          files: release/*
