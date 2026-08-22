@@ -7,7 +7,7 @@ on:
       version:
         description: "Release version (e.g. 1.0.0)"
         required: true
-        default: "1.0.0"
+        default: "1.1.0"
       prerelease:
         description: "Mark as pre-release?"
         type: boolean

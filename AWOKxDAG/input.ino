@@ -79,14 +79,30 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kMonitor) {
-    if (y >= 52 && y < 92) {
-      startDeauthMonitor();
-    } else if (y >= 100 && y < 140) {
-      startRogueWatch();
-    } else if (y >= 148 && y < 188) {
-      startBleDetect();
-    } else if (y >= kFooterTop) {
+    if (y < kFooterTop) {
+      const int start = monitorPage * kMenuPerPage;
+      for (int row = 0; row < kMenuPerPage; ++row) {
+        const int index = start + row;
+        if (index >= kMonitorItemCount) break;
+        const int by = kMenuFirstY + row * kMenuRowPitch;
+        if (y >= by && y < by + kMenuRowHeight) {
+          launchMonitorItem(index);
+          return;
+        }
+      }
+      return;
+    }
+    const int pages = monitorPageCount();
+    if (pages <= 1) {
       drawHome();
+    } else if (x < 80) {
+      drawHome();
+    } else if (x < 160) {
+      monitorPage = (monitorPage - 1 + pages) % pages;
+      drawMonitorMenu();
+    } else {
+      monitorPage = (monitorPage + 1) % pages;
+      drawMonitorMenu();
     }
     return;
   }
@@ -170,6 +186,76 @@ void handleTouch() {
   if (currentView == View::kHiddenReveal) {
     stopHiddenReveal();
     drawReconMenu();
+    return;
+  }
+  if (currentView == View::kSecurityAudit) {
+    if (x < kScreenWidth / 2) {
+      stopSecurityAudit();
+      drawReconMenu();
+    } else {
+      lastAuditCsvOk = exportSecurityAuditToSd();
+      drawSecurityAudit();
+    }
+    return;
+  }
+  if (currentView == View::kTrackerScan) {
+    if (x < kScreenWidth / 2) {
+      stopTrackerScan();
+      drawReconMenu();
+    } else {
+      lastTrackerCsvOk = exportTrackersToSd();
+      drawTrackerScan();
+    }
+    return;
+  }
+  if (currentView == View::kHarvester) {
+    if (x < kScreenWidth / 2) {
+      stopHarvester();
+      drawReconMenu();
+    } else {
+      resetHarvester();
+      drawHarvester();
+    }
+    return;
+  }
+  if (currentView == View::kProbeIntel) {
+    if (x < kScreenWidth / 2) {
+      stopProbeIntel();
+      drawReconMenu();
+    } else {
+      lastProbeIntelCsvOk = exportProbeIntelToSd();
+      drawProbeIntel();
+    }
+    return;
+  }
+  if (currentView == View::kKarmaWatch) {
+    if (x < kScreenWidth / 2) {
+      stopKarmaWatch();
+      drawMonitorMenu();
+    } else {
+      resetKarmaWatch();
+      drawKarmaWatch();
+    }
+    return;
+  }
+  if (currentView == View::kBeaconWatch) {
+    if (x < kScreenWidth / 2) {
+      stopBeaconWatch();
+      drawMonitorMenu();
+    } else {
+      resetBeaconWatch();
+      drawBeaconWatch();
+    }
+    return;
+  }
+  if (currentView == View::kAuthFlood) {
+    if (x < kScreenWidth / 2) {
+      stopAuthFlood();
+      drawMonitorMenu();
+    } else {
+      resetAuthFlood();
+      drawAuthFlood();
+    }
     return;
   }
   if (currentView == View::kDeauthMonitor) {
@@ -394,7 +480,9 @@ void handleSerial() {
       clientSnifferActive || beaconFloodActive || evilPortalActive ||
       wardriveActive || pktmonActive || wpsScanActive || rogueWatchActive ||
       hiddenRevealActive || cameraActive || bleDetectActive ||
-      probeLureActive) {
+      probeLureActive || securityAuditActive || trackerScanActive ||
+      harvesterActive || probeIntelActive || karmaWatchActive ||
+      beaconWatchActive || authFloodActive) {
     if (command == 'h') {
       if (deauthAttackActive) stopDeauthAttack();
       if (deauthMonitorActive) stopDeauthMonitor();
@@ -410,6 +498,13 @@ void handleSerial() {
       if (cameraActive) stopCameraScan();
       if (bleDetectActive) stopBleDetect();
       if (probeLureActive) stopProbeLure();
+      if (securityAuditActive) stopSecurityAudit();
+      if (trackerScanActive) stopTrackerScan();
+      if (harvesterActive) stopHarvester();
+      if (probeIntelActive) stopProbeIntel();
+      if (karmaWatchActive) stopKarmaWatch();
+      if (beaconWatchActive) stopBeaconWatch();
+      if (authFloodActive) stopAuthFlood();
       drawHome();
     }
     return;

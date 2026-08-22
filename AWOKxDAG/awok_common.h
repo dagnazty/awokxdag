@@ -56,7 +56,7 @@ constexpr uint8_t kDeauthHopChannels[] = {
 constexpr int kDeauthHopChannelCount =
     static_cast<int>(sizeof(kDeauthHopChannels));
 constexpr int kMaxDeauthTargets = 8;
-constexpr char kVersion[] = "1.0.0";
+constexpr char kVersion[] = "1.1.0";
 constexpr char kAuthor[] = "dag nazty";
 constexpr char kHandshakePcapPath[] = "/awokxdag/latest_handshake.pcap";
 constexpr uint32_t kHandshakeRedrawMs = 500;
@@ -80,6 +80,64 @@ constexpr char kWardriveCsvPath[] = "/awokxdag/wardrive.csv";
 constexpr int kMaxWardriveMacs = 512;
 constexpr uint32_t kWardriveRedrawMs = 800;
 constexpr int kBleHitQueueSlots = 24;
+
+// Security Audit: passive beacon-IE posture report (encryption tier, PMF, WPS).
+constexpr char kSecurityAuditCsvPath[] = "/awokxdag/security_audit.csv";
+constexpr int kMaxAudit = 24;
+constexpr int kAuditHitQueueSlots = 24;
+constexpr uint32_t kAuditHopIntervalMs = 300;
+constexpr uint32_t kAuditRedrawMs = 700;
+
+// BLE Trackers: passive AirTag/Find My, Tile, Samsung SmartTag detection.
+constexpr char kTrackerCsvPath[] = "/awokxdag/ble_trackers.csv";
+constexpr int kMaxTrackers = 24;
+constexpr int kTrackerHitQueueSlots = 32;
+constexpr uint32_t kTrackerRedrawMs = 700;
+// A tracker seen over a span longer than this (with repeat sightings) while you
+// move is flagged as potentially following you.
+constexpr uint32_t kTrackerFollowMs = 45000;
+constexpr uint32_t kTrackerMinSightings = 4;
+
+// Harvester: all-channel passive EAPOL/PMKID collection (no deauth).
+constexpr char kHarvestPcapPath[] = "/awokxdag/harvest.pcap";
+constexpr char kHarvestPmkidPath[] = "/awokxdag/harvest_pmkid.txt";
+constexpr int kMaxHarvestAp = 24;
+constexpr int kMaxHarvestSeen = 64;  // beacons written once per BSSID
+constexpr uint32_t kHarvestHopIntervalMs = 300;
+constexpr uint32_t kHarvestRedrawMs = 700;
+
+// Probe Intel: directed probe-request SSID aggregation.
+constexpr char kProbeIntelCsvPath[] = "/awokxdag/probe_intel.csv";
+constexpr int kMaxProbeSsids = 24;
+constexpr int kProbeMacsPerSsid = 8;
+constexpr int kProbeHitQueueSlots = 32;
+constexpr uint32_t kProbeHopIntervalMs = 300;
+constexpr uint32_t kProbeRedrawMs = 700;
+
+// Karma Watch: one BSSID answering many SSIDs (WiFi Pineapple / Karma / MANA).
+constexpr char kKarmaLogCsvPath[] = "/awokxdag/karma_log.csv";
+constexpr int kMaxKarmaAps = 24;
+constexpr int kKarmaSsidsPerAp = 6;
+constexpr int kKarmaHitQueueSlots = 24;
+constexpr int kKarmaSsidThreshold = 3;  // distinct SSIDs => suspicious
+constexpr uint32_t kKarmaHopIntervalMs = 300;
+constexpr uint32_t kKarmaRedrawMs = 700;
+
+// Beacon Watch: beacon-flood / fake-AP detection by BSSID diversity per window.
+constexpr char kBeaconWatchLogCsvPath[] = "/awokxdag/beacon_flood_log.csv";
+constexpr int kBeaconWatchWindowSet = 64;   // distinct BSSIDs counted per window
+constexpr int kBeaconWatchHitQueueSlots = 32;
+constexpr uint32_t kBeaconWatchWindowMs = 2000;
+constexpr uint32_t kBeaconWatchRedrawMs = 500;
+constexpr uint32_t kBeaconWatchHopIntervalMs = 250;
+constexpr uint32_t kBeaconFloodThreshold = 25;  // distinct BSSIDs / window
+
+// Auth Flood Watch: authentication / association flood DoS against an AP.
+constexpr char kAuthFloodLogCsvPath[] = "/awokxdag/auth_flood_log.csv";
+constexpr uint32_t kAuthFloodWindowMs = 2000;
+constexpr uint32_t kAuthFloodRedrawMs = 500;
+constexpr uint32_t kAuthFloodHopIntervalMs = 250;
+constexpr uint32_t kAuthFloodThreshold = 30;  // auth/assoc frames / window
 
 constexpr uint16_t kBackground = ILI9341_BLACK;
 constexpr uint16_t kPanel = 0x1082;
@@ -119,7 +177,14 @@ enum class View {
   kProbeLure,
   kRogueWatch,
   kHiddenReveal,
-  kCameraScan
+  kCameraScan,
+  kSecurityAudit,
+  kTrackerScan,
+  kHarvester,
+  kProbeIntel,
+  kKarmaWatch,
+  kBeaconWatch,
+  kAuthFlood
 };
 
 // A suspected surveillance camera found by the camera scan.
@@ -252,6 +317,107 @@ struct BleHit {
   char addr[18];
   int8_t rssi;
   char name[24];
+};
+
+// Security Audit encryption tiers (worst -> best), used for scoring/coloring.
+enum AuditEnc {
+  kAuditOpen = 0,   // no privacy bit
+  kAuditWep = 1,    // privacy, no RSN/WPA IE
+  kAuditWpa = 2,    // WPA1 vendor IE only (TKIP)
+  kAuditWpa2 = 3,   // RSN PSK/CCMP
+  kAuditWpa2Tkip = 4,
+  kAuditWpa23 = 5,  // RSN PSK+SAE transition
+  kAuditWpa3 = 6,   // RSN SAE only
+  kAuditOwe = 7,    // Enhanced Open
+  kAuditEnterprise = 8
+};
+
+// POD beacon observation handed from the Wi-Fi task to the security audit.
+struct AuditHit {
+  uint8_t bssid[6];
+  uint8_t channel;
+  int8_t rssi;
+  uint8_t enc;  // AuditEnc
+  uint8_t pmf;  // 0 none, 1 capable, 2 required
+  uint8_t wps;  // 0 none, 1 open, 2 locked
+  uint8_t ssidLen;
+  char ssid[33];
+};
+
+struct AuditEntry {
+  uint8_t bssid[6] = {0};
+  uint8_t channel = 0;
+  int32_t rssi = -127;
+  uint8_t enc = kAuditOpen;
+  uint8_t pmf = 0;
+  uint8_t wps = 0;
+  int risk = 0;
+  bool logged = false;
+  String ssid;
+};
+
+// POD BLE tracker sighting handed from the NimBLE task to the tracker scan.
+struct TrackerHit {
+  char addr[18];
+  int8_t rssi;
+  uint8_t kind;  // 1 Apple Find My, 2 Tile, 3 Samsung SmartTag
+};
+
+struct TrackerEntry {
+  String addr;
+  int32_t rssi = -127;
+  uint8_t kind = 0;
+  uint32_t firstSeenMs = 0;
+  uint32_t lastSeenMs = 0;
+  uint32_t sightings = 0;
+  bool following = false;
+  bool logged = false;
+};
+
+// One AP tracked by the handshake harvester (SSID learned from beacons, EAPOL
+// progress and PMKID learned from captured key frames).
+struct HarvestAp {
+  uint8_t bssid[6] = {0};
+  char ssid[33] = {0};
+  uint8_t msgMask = 0;  // EAPOL messages 1..4
+  bool pmkid = false;
+};
+
+// POD probe-request observation handed from the Wi-Fi task to Probe Intel.
+struct ProbeHit {
+  uint8_t mac[6];
+  int8_t rssi;
+  uint8_t ssidLen;
+  char ssid[33];
+};
+
+struct ProbeSsidEntry {
+  String ssid;
+  uint32_t probes = 0;
+  int32_t rssi = -127;
+  uint8_t lastMac[6] = {0};
+  uint8_t macs[kProbeMacsPerSsid][6] = {{0}};
+  int macCount = 0;
+  bool macOverflow = false;
+};
+
+// One AP tracked by Karma Watch: the distinct SSIDs a single BSSID claims.
+struct KarmaEntry {
+  uint8_t bssid[6] = {0};
+  uint8_t channel = 0;
+  int32_t rssi = -127;
+  String ssids[kKarmaSsidsPerAp];
+  int ssidCount = 0;
+  bool overflow = false;
+  bool suspicious = false;
+  bool logged = false;
+};
+
+// Minimal POD beacon observation (BSSID only) for Beacon Watch.
+struct BssidHit {
+  uint8_t bssid[6];
+  uint8_t channel;
+  int8_t rssi;
 };
 
 struct BleEntry {

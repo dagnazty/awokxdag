@@ -24,6 +24,7 @@ int bleCount = 0;
 View currentView = View::kHome;
 View auditReturnView = View::kWifi;
 int reconPage = 0;
+int monitorPage = 0;
 int homePage = 0;
 bool scanInProgress = false;
 bool pktmonActive = false;      // packet monitor (state defined in pktmon.ino)
@@ -33,6 +34,18 @@ bool hiddenRevealActive = false;  // hidden-SSID reveal (state in hidden.ino)
 bool cameraActive = false;      // camera scan (state defined in cameras.ino)
 bool bleDetectActive = false;   // BLE spam watch (state in bledetect.ino)
 bool probeLureActive = false;   // PineAP-lite probe lure (state in probelure.ino)
+bool securityAuditActive = false;  // security posture audit (securityaudit.ino)
+bool trackerScanActive = false;    // BLE tracker scan (state in tracker.ino)
+bool harvesterActive = false;      // handshake harvester (state in harvester.ino)
+bool probeIntelActive = false;     // probe-request SSID map (probeintel.ino)
+bool karmaWatchActive = false;     // Karma/Pineapple watch (karmawatch.ino)
+bool beaconWatchActive = false;    // beacon-flood watch (state in beaconwatch.ino)
+bool authFloodActive = false;      // auth/assoc flood watch (authflood.ino)
+// SD export status for the new recon tabs (read by input.ino, which is
+// concatenated before those tabs, so the flags must live in the main sketch).
+bool lastAuditCsvOk = false;
+bool lastTrackerCsvOk = false;
+bool lastProbeIntelCsvOk = false;
 bool sdReady = false;
 bool lastSavedSdWriteOk = false;
 bool lastScanSdWriteOk = false;
@@ -1257,9 +1270,11 @@ void updateWifiSignalMonitor() {
 
 // Data-driven Recon menu: append an item here (label + a case in
 // launchReconItem) and it paginates automatically. 6 items per page.
-const char* const kReconItems[] = {"Wi-Fi Scan",  "Channel Map", "BLE Scan",
-                                   "Clients",     "Packet Mon",  "WPS Scan",
-                                   "Hidden SSID", "Cameras",     "Saved"};
+const char* const kReconItems[] = {
+    "Wi-Fi Scan",   "Channel Map",  "BLE Scan",     "Clients",
+    "Packet Mon",   "WPS Scan",     "Hidden SSID",  "Cameras",
+    "Security Audit", "BLE Trackers", "Harvester",  "Probe Intel",
+    "Saved"};
 constexpr int kReconItemCount =
     static_cast<int>(sizeof(kReconItems) / sizeof(kReconItems[0]));
 constexpr int kMenuPerPage = 6;
@@ -1300,6 +1315,14 @@ void launchReconItem(int index) {
     startHiddenReveal();
   } else if (label == "Cameras") {
     startCameraScan();
+  } else if (label == "Security Audit") {
+    startSecurityAudit();
+  } else if (label == "BLE Trackers") {
+    startTrackerScan();
+  } else if (label == "Harvester") {
+    startHarvester();
+  } else if (label == "Probe Intel") {
+    startProbeIntel();
   } else if (label == "Saved") {
     drawSavedNetworks();
   }
@@ -1327,20 +1350,55 @@ void drawReconMenu() {
   }
 }
 
+// Data-driven Monitor menu (mirrors the Recon menu): append an item here plus a
+// case in launchMonitorItem and it paginates automatically. 6 items per page.
+const char* const kMonitorItems[] = {
+    "Deauth Watch",   "Rogue Watch", "BLE Spam Watch",
+    "Karma Watch",    "Beacon Watch", "Auth Flood"};
+constexpr int kMonitorItemCount =
+    static_cast<int>(sizeof(kMonitorItems) / sizeof(kMonitorItems[0]));
+
+int monitorPageCount() {
+  return (kMonitorItemCount + kMenuPerPage - 1) / kMenuPerPage;
+}
+
+void launchMonitorItem(int index) {
+  const String label = kMonitorItems[index];
+  if (label == "Deauth Watch") {
+    startDeauthMonitor();
+  } else if (label == "Rogue Watch") {
+    startRogueWatch();
+  } else if (label == "BLE Spam Watch") {
+    startBleDetect();
+  } else if (label == "Karma Watch") {
+    startKarmaWatch();
+  } else if (label == "Beacon Watch") {
+    startBeaconWatch();
+  } else if (label == "Auth Flood") {
+    startAuthFlood();
+  }
+}
+
 void drawMonitorMenu() {
   currentView = View::kMonitor;
+  const int pages = monitorPageCount();
+  if (monitorPage >= pages) monitorPage = 0;
   display.fillScreen(kBackground);
-  drawHeader("MONITOR", "detect attacks in the air");
-  drawButton(20, 52, 200, 40, "Deauth Watch");
-  drawButton(20, 100, 200, 40, "Rogue Watch");
-  drawButton(20, 148, 200, 40, "BLE Spam Watch");
-  display.setTextSize(1);
-  display.setTextColor(kMuted, kBackground);
-  display.setCursor(18, 200);
-  display.print("Deauth/Rogue: Wi-Fi. BLE Spam");
-  display.setCursor(18, 212);
-  display.print("Watch: advertisement floods.");
-  drawFooter("Home", "Home");
+  drawHeader("MONITOR", pages > 1 ? "detect attacks  " + String(monitorPage + 1) +
+                                        "/" + String(pages)
+                                  : "detect attacks in the air");
+  const int start = monitorPage * kMenuPerPage;
+  for (int row = 0; row < kMenuPerPage; ++row) {
+    const int index = start + row;
+    if (index >= kMonitorItemCount) break;
+    drawButton(20, kMenuFirstY + row * kMenuRowPitch, 200, kMenuRowHeight,
+               kMonitorItems[index]);
+  }
+  if (pages > 1) {
+    drawThreeButtonFooter("Home", "< Prev", "Next >");
+  } else {
+    drawFooter("Home", "Home");
+  }
 }
 
 void drawAttacksMenu() {
@@ -1551,6 +1609,13 @@ void loop() {
   updateWps();
   updateRogueWatch();
   updateHiddenReveal();
+  updateSecurityAudit();
+  updateTrackerScan();
+  updateHarvester();
+  updateProbeIntel();
+  updateKarmaWatch();
+  updateBeaconWatch();
+  updateAuthFlood();
   // Live-refresh the GPS status screen while it is open.
   static uint32_t lastGpsScreenDrawMs = 0;
   if (currentView == View::kGps && millis() - lastGpsScreenDrawMs >= 1000) {

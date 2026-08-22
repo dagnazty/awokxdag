@@ -3,7 +3,7 @@
 **Dual-band Wi-Fi / BLE penetration-testing toolkit for the ESP32-C5** (AWOK Dual
 C5, white-USB screen board with an ILI9341 touchscreen).
 
-- **Version:** 1.0.0
+- **Version:** 1.1.0
 - **Author:** dag nazty
 - **Target:** ESP32-C5 Dev Module, 8 MB flash, PSRAM, microSD
 
@@ -37,6 +37,23 @@ C5, white-USB screen board with an ILI9341 touchscreen).
   (Ring, Blink, Wyze, Nest, Arlo, Reolink, Eufy, Tapo, Hikvision, Dahua...) by
   vendor OUI (beaconing APs *and* connected clients), SSID/BLE name, and BLE
   manufacturer id.
+- **Security Audit** — passive beacon-IE posture report: parses each AP's RSN /
+  WPA / WPS information elements and classifies it by encryption tier (Open /
+  WEP / WPA / WPA2 / WPA2-TKIP / WPA2-WPA3 / WPA3 / OWE / Enterprise), 802.11w
+  PMF (none / optional / required) and WPS (open / locked), scores each network's
+  risk, and sorts the weakest to the top. Listen-only.
+- **BLE Trackers** — flags personal item trackers: Apple Find My / AirTags in the
+  separated ("offline finding") state, Tile tags, and Samsung SmartTags. Tracks
+  each address over time and raises a **FOLLOW** alert when one persists across a
+  long enough span with repeat sightings — the planted-tracker privacy case.
+  Passive.
+- **Harvester** — all-channel passive EAPOL / PMKID collector. Hops every channel
+  recording WPA key frames already in the air (plus one beacon per BSSID for the
+  ESSID) to `harvest.pcap`, and writes hashcat-ready PMKID lines. **No deauth is
+  sent** — the quiet counterpart to the targeted Grab.
+- **Probe Intel** — aggregates directed probe requests by the SSID they name,
+  ranked by probe count and distinct devices, revealing the preferred-network
+  lists leaking from nearby devices. Passive.
 - **Saved** — up to 10 access points kept in NVS across reboots.
 
 ### Attacks (active — authorized targets only)
@@ -61,6 +78,15 @@ C5, white-USB screen board with an ILI9341 touchscreen).
   SSID appearing on a new BSSID.
 - **BLE Spam Watch** — flags BLE advertisement floods (Apple continuity, Swift
   Pair, Samsung, Fast Pair) by rate + vendor payload. Passive.
+- **Karma Watch** — the inverse of Rogue Watch: flags a single BSSID that beacons
+  or probe-responds for *many* different SSIDs — the signature of a WiFi
+  Pineapple / Karma / MANA rogue AP answering every network a victim looks for.
+  Passive.
+- **Beacon Watch** — counts distinct BSSIDs beaconing per short window and alerts
+  on a spike — beacon-flood / fake-AP spam (mdk4, or this firmware's own Beacon
+  Flood). Passive.
+- **Auth Flood** — detects authentication / association-request floods against an
+  AP (mdk4 `a` / connection-flood DoS) and names the targeted AP. Passive.
 
 ### GPS
 - **GPS status** — fix, satellites, coordinates, speed, HDOP, plus a baud cycler
@@ -84,12 +110,14 @@ Home  page 1: Recon | Attacks | Monitor | GPS | Status      (footer: About >)
       page 2: About  (name, version, board, authorized-use notice)
 
 Recon page 1: Wi-Fi Scan | Channel Map | BLE Scan | Clients | Packet Mon | WPS Scan
-      page 2: Hidden SSID | Saved | Cameras
+      page 2: Hidden SSID | Cameras | Security Audit | BLE Trackers | Harvester | Probe Intel
+      page 3: Saved
 
 Attacks:      Beacon Flood | Evil Portal | Evil Twin | Probe Lure
               (Deauth / Handshake launch from a scanned Wi-Fi result)
 
-Monitor:      Deauth Watch | Rogue Watch | BLE Spam Watch
+Monitor:      Deauth Watch | Rogue Watch | BLE Spam Watch | Karma Watch |
+              Beacon Watch | Auth Flood
 
 GPS:          status screen -> Baud / Wardrive
 ```
@@ -120,6 +148,14 @@ works without a card, and readable snapshots mirror to:
 | `portal_creds.csv` | evil portal / evil twin |
 | `pktmon.pcap` | packet monitor |
 | `wardrive.csv` | WiGLE 1.4 wardrive (Wi-Fi + BLE) |
+| `security_audit.csv` | Security Audit posture report |
+| `ble_trackers.csv` | BLE Trackers scan |
+| `harvest.pcap` | Harvester capture (link type 105) |
+| `harvest_pmkid.txt` | Harvester PMKIDs (hashcat-ready) |
+| `probe_intel.csv` | Probe Intel SSID map |
+| `karma_log.csv` | Karma Watch alerts |
+| `beacon_flood_log.csv` | Beacon Watch flood windows |
+| `auth_flood_log.csv` | Auth Flood alerts |
 
 The camera and BLE-spam watches are live-view only.
 
@@ -164,7 +200,8 @@ Single Arduino sketch split into feature tabs (one translation unit):
 (types/enums/constants) + `board_pins.h`, and per-feature tabs: `gps`,
 `deauth`, `handshake`, `sniffer`, `beacon`, `portal`, `wardrive` (in gps),
 `pktmon`, `cameras`, `wps`, `hidden`, `roguewatch`, `bledetect`, `probelure`,
-`status`, `files`, `input`.
+`securityaudit`, `tracker`, `harvester`, `probeintel`, `karmawatch`,
+`beaconwatch`, `authflood`, `status`, `files`, `input`.
 
 ## Recovery
 
