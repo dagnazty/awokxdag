@@ -7,6 +7,10 @@ constexpr int kTopoAnchorMarginDb = 7;
 constexpr int kTopoMaxNodes = 12;
 constexpr int kTopoTrackSlots = 32;
 constexpr int kTopoGroupSlots = 12;
+constexpr int kTopoPopupX = 6;
+constexpr int kTopoPopupY = 44;
+constexpr int kTopoPopupW = 228;
+constexpr int kTopoPopupH = 58;
 
 static const uint16_t kTopoPal[101] = {
   0x0049, 0x088B, 0x08AC, 0x08CD, 0x08EE, 0x090F, 0x0930, 0x0951, 0x0992, 0x09B2,
@@ -221,19 +225,15 @@ bool topoGraphTap(int x, int y) {
 
 void drawTopoPopup(int idx) {
   const TopoAp& ap = topoAps[idx];
-  const int bx = 6;
-  const int by = 44;
-  const int bw = 228;
-  const int bh = 58;
-  display.fillRect(bx, by, bw, bh, kPanel);
-  display.drawRect(bx, by, bw, bh, kAccent);
+  display.fillRect(kTopoPopupX, kTopoPopupY, kTopoPopupW, kTopoPopupH, kPanel);
+  display.drawRect(kTopoPopupX, kTopoPopupY, kTopoPopupW, kTopoPopupH, kAccent);
   display.setTextColor(kAccent, kPanel);
-  display.setCursor(bx + 4, by + 3);
+  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 3);
   display.print(ap.ssid[0] ? clipped(ap.ssid, 36) : String("<hidden>"));
   display.setTextColor(kForeground, kPanel);
-  display.setCursor(bx + 4, by + 15);
+  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 15);
   display.print(macToString(ap.bssid));
-  display.setCursor(bx + 4, by + 27);
+  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 27);
   display.print("ch ");
   display.print(ap.channel);
   display.print("  ");
@@ -241,15 +241,168 @@ void drawTopoPopup(int idx) {
   display.print("  ");
   display.print(ap.rssi);
   display.print("dBm");
-  display.setCursor(bx + 4, by + 39);
+  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 39);
   display.setTextColor(topoSecurityWarn(ap.security) ? kWarn : kMuted, kPanel);
   display.print(topoSecurityLabel(ap.security));
   display.setTextColor(kMuted, kPanel);
   display.print("   ");
   display.print(ap.clientCount);
   display.print(" cli");
-  display.setCursor(bx + 4, by + 50);
+  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 50);
   display.print("tap away to clear");
+}
+
+int topoRectOverlapArea(int ax, int ay, int aw, int ah, int bx, int by, int bw, int bh) {
+  int x0 = ax > bx ? ax : bx;
+  int y0 = ay > by ? ay : by;
+  int x1 = ax + aw < bx + bw ? ax + aw : bx + bw;
+  int y1 = ay + ah < by + bh ? ay + ah : by + bh;
+  if (x1 <= x0 || y1 <= y0) return 0;
+  return (x1 - x0) * (y1 - y0);
+}
+
+void topoRelaxPositions(int* posX, int* posY, const int* idealX, const int* idealY, const int* nodeRadius, const bool* nodeAnchor, int shownN, int cx, int cy, int cyTop, int cyBot) {
+  for (int pass = 0; pass < 8; ++pass) {
+    for (int i = 0; i < shownN; ++i) {
+      for (int j = i + 1; j < shownN; ++j) {
+        int dx = posX[i] - posX[j];
+        int dy = posY[i] - posY[j];
+        int adx = abs(dx);
+        int ady = abs(dy);
+        int dist = (adx > ady ? adx : ady) + ((adx < ady ? adx : ady) >> 1);
+        int need = nodeRadius[i] + nodeRadius[j] + 9;
+        if (dist >= need) continue;
+        if (dist == 0) {
+          dx = ((i + j) & 1) ? 1 : -1;
+          dy = ((i * 3 + j) & 1) ? 1 : -1;
+          dist = 1;
+        }
+        int overlap = need - dist + 1;
+        int mi = nodeAnchor[i] ? 1 : 3;
+        int mj = nodeAnchor[j] ? 1 : 3;
+        int total = mi + mj;
+        int pi = overlap * mi / total;
+        int pj = overlap - pi;
+        if (pi < 1) pi = 1;
+        if (pj < 1) pj = 1;
+        int ux = dx * 256 / dist;
+        int uy = dy * 256 / dist;
+        posX[i] += ux * pi / 256;
+        posY[i] += uy * pi / 256;
+        posX[j] -= ux * pj / 256;
+        posY[j] -= uy * pj / 256;
+      }
+    }
+
+    for (int i = 0; i < shownN; ++i) {
+      int dx = posX[i] - cx;
+      int dy = posY[i] - cy;
+      int adx = abs(dx);
+      int ady = abs(dy);
+      int dist = (adx > ady ? adx : ady) + ((adx < ady ? adx : ady) >> 1);
+      int need = nodeRadius[i] + 15;
+      if (dist < need) {
+        if (dist == 0) {
+          dx = (i & 1) ? 1 : -1;
+          dy = (i & 2) ? 1 : -1;
+          dist = 1;
+        }
+        int push = need - dist + 1;
+        posX[i] += dx * push / dist;
+        posY[i] += dy * push / dist;
+      }
+
+      if (pass < 6) {
+        int spring = nodeAnchor[i] ? 5 : 9;
+        posX[i] += (idealX[i] - posX[i]) / spring;
+        posY[i] += (idealY[i] - posY[i]) / spring;
+      }
+
+      if (topoHasSel) {
+        int m = nodeRadius[i] + 5;
+        if (posX[i] + m > kTopoPopupX && posX[i] - m < kTopoPopupX + kTopoPopupW &&
+            posY[i] + m > kTopoPopupY && posY[i] - m < kTopoPopupY + kTopoPopupH) {
+          posY[i] = kTopoPopupY + kTopoPopupH + m;
+        }
+      }
+
+      int edge = nodeRadius[i] + 3;
+      if (posX[i] < edge) posX[i] = edge;
+      if (posX[i] > kScreenWidth - edge) posX[i] = kScreenWidth - edge;
+      if (posY[i] < cyTop + edge) posY[i] = cyTop + edge;
+      if (posY[i] > cyBot - edge) posY[i] = cyBot - edge;
+    }
+  }
+}
+
+bool topoPositionClear(int x, int y, int self, const int* posX, const int* posY, const int* nodeRadius, int shownN, int cx, int cy, int cyTop, int cyBot) {
+  int edge = nodeRadius[self] + 3;
+  if (x < edge || x > kScreenWidth - edge || y < cyTop + edge || y > cyBot - edge) return false;
+  int dx = x - cx;
+  int dy = y - cy;
+  int adx = abs(dx);
+  int ady = abs(dy);
+  int dist = (adx > ady ? adx : ady) + ((adx < ady ? adx : ady) >> 1);
+  if (dist < nodeRadius[self] + 15) return false;
+  if (topoHasSel) {
+    int m = nodeRadius[self] + 5;
+    if (x + m > kTopoPopupX && x - m < kTopoPopupX + kTopoPopupW &&
+        y + m > kTopoPopupY && y - m < kTopoPopupY + kTopoPopupH) return false;
+  }
+  for (int j = 0; j < shownN; ++j) {
+    if (j == self) continue;
+    int px = x - posX[j];
+    int py = y - posY[j];
+    int apx = abs(px);
+    int apy = abs(py);
+    int pd = (apx > apy ? apx : apy) + ((apx < apy ? apx : apy) >> 1);
+    if (pd < nodeRadius[self] + nodeRadius[j] + 9) return false;
+  }
+  return true;
+}
+
+void topoHardSeparate(int* posX, int* posY, const int* nodeRadius, const bool* nodeAnchor, int shownN, int cx, int cy, int cyTop, int cyBot) {
+  for (int phase = 0; phase < 2; ++phase) {
+    for (int i = 0; i < shownN; ++i) {
+      if ((phase == 0 && nodeAnchor[i]) || (phase == 1 && !nodeAnchor[i])) continue;
+      if (topoPositionClear(posX[i], posY[i], i, posX, posY, nodeRadius, shownN, cx, cy, cyTop, cyBot)) continue;
+      int ox = posX[i];
+      int oy = posY[i];
+      bool found = false;
+      for (int ring = 2; ring <= 48 && !found; ring += 2) {
+        for (int d = 0; d < 24; ++d) {
+          int x = ox + topoCosT(d) * ring / 256;
+          int y = oy + topoSinT(d) * ring / 256;
+          if (!topoPositionClear(x, y, i, posX, posY, nodeRadius, shownN, cx, cy, cyTop, cyBot)) continue;
+          posX[i] = x;
+          posY[i] = y;
+          found = true;
+          break;
+        }
+      }
+    }
+  }
+}
+
+int topoLabelPenalty(int lx, int ly, int lw, int lh, int self, const int* posX, const int* posY, const int* nodeRadius, int shownN, const int* labelX, const int* labelY, const int* labelW, const bool* labelPlaced, int cy) {
+  int penalty = 0;
+  for (int i = 0; i < shownN; ++i) {
+    int pad = nodeRadius[i] + 2;
+    int area = topoRectOverlapArea(lx, ly, lw, lh, posX[i] - pad, posY[i] - pad, pad * 2 + 1, pad * 2 + 1);
+    if (area > 0) penalty += area * 8 + (i == self ? 400 : 1200);
+  }
+  for (int i = 0; i < shownN; ++i) {
+    if (!labelPlaced[i]) continue;
+    int area = topoRectOverlapArea(lx, ly, lw, lh, labelX[i] - 1, labelY[i] - 1, labelW[i] + 2, 12);
+    if (area > 0) penalty += area * 20 + 5000;
+  }
+  int youArea = topoRectOverlapArea(lx, ly, lw, lh, kScreenWidth / 2 - 15, cy - 10, 30, 31);
+  if (youArea > 0) penalty += youArea * 20 + 5000;
+  if (topoHasSel) {
+    int area = topoRectOverlapArea(lx, ly, lw, lh, kTopoPopupX - 1, kTopoPopupY - 1, kTopoPopupW + 2, kTopoPopupH + 2);
+    if (area > 0) penalty += area * 30 + 12000;
+  }
+  return penalty;
 }
 
 void drawTopologyGraphBody() {
@@ -373,9 +526,12 @@ void drawTopologyGraphBody() {
 
   int posX[kTopoMaxNodes];
   int posY[kTopoMaxNodes];
+  int idealX[kTopoMaxNodes];
+  int idealY[kTopoMaxNodes];
   int posAngle[kTopoMaxNodes];
   int nodeRadius[kTopoMaxNodes];
   uint16_t nodeHeat[kTopoMaxNodes];
+  bool nodeAnchor[kTopoMaxNodes];
 
   for (int s = 0; s < shownN; ++s) {
     const TopoAp& ap = topoAps[shownIdx[s]];
@@ -417,10 +573,16 @@ void drawTopologyGraphBody() {
 
     posX[s] = ax;
     posY[s] = ay;
+    idealX[s] = ax;
+    idealY[s] = ay;
     posAngle[s] = idx;
     nodeRadius[s] = 5 + (ap.clientCount > 3 ? 3 : ap.clientCount);
     nodeHeat[s] = topoDim(topoColor(shownRssi[s], minR, span), pct);
+    nodeAnchor[s] = s == anchorS;
   }
+
+  topoRelaxPositions(posX, posY, idealX, idealY, nodeRadius, nodeAnchor, shownN, cx, cy, cyTop, cyBot);
+  topoHardSeparate(posX, posY, nodeRadius, nodeAnchor, shownN, cx, cy, cyTop, cyBot);
 
   for (int g = 0; g < groupCount; ++g) {
     int anchorS = groupAnchorPos[g];
@@ -436,8 +598,6 @@ void drawTopologyGraphBody() {
   for (int s = 0; s < shownN; ++s) {
     const TopoAp& ap = topoAps[shownIdx[s]];
     int pct = topoFreshPct(now, ap.lastSeenMs);
-    int g = groupOf[s];
-    int anchorS = groupAnchorPos[g];
     int ax = posX[s];
     int ay = posY[s];
     int idx = posAngle[s];
@@ -468,34 +628,98 @@ void drawTopologyGraphBody() {
     if (ap.isOpen) display.drawCircle(ax, ay, nodeR + 2, topoDim(kWarn, pct));
     if (topoHasSel && memcmp(topoSelBssid, ap.bssid, 6) == 0) display.drawCircle(ax, ay, nodeR + 4, kForeground);
 
-    if (s == anchorS) {
-      String label = ap.ssid[0] ? clipped(ap.ssid, 10) : String("<hdn>");
-      int lw = label.length() * 6;
-      int dx = ax - cx;
-      int dy = ay - cy;
-      int lx = ax - lw / 2;
-      int ly = ay - 3;
-      if (abs(dx) >= abs(dy)) {
-        lx = dx < 0 ? ax - nodeR - lw - 4 : ax + nodeR + 4;
-        ly = ay - 3;
-      } else {
-        lx = ax - lw / 2;
-        ly = dy < 0 ? ay - nodeR - 11 : ay + nodeR + 3;
-      }
-      if (lx < 1) lx = 1;
-      if (lx + lw > kScreenWidth - 1) lx = kScreenWidth - 1 - lw;
-      if (ly < cyTop + 1) ly = cyTop + 1;
-      if (ly > cyBot - 9) ly = cyBot - 9;
-      display.fillRect(lx - 1, ly - 1, lw + 2, 10, kBackground);
-      display.setTextColor(topoDim(ap.isOpen ? kWarn : kForeground, pct), kBackground);
-      display.setCursor(lx, ly);
-      display.print(label);
-    }
-
     topoNodeX[topoNodeCount] = ax;
     topoNodeY[topoNodeCount] = ay;
     memcpy(topoNodeBssid[topoNodeCount], ap.bssid, 6);
     ++topoNodeCount;
+  }
+
+  int labelX[kTopoMaxNodes];
+  int labelY[kTopoMaxNodes];
+  int labelW[kTopoMaxNodes];
+  bool labelPlaced[kTopoMaxNodes];
+  for (int s = 0; s < shownN; ++s) labelPlaced[s] = false;
+
+  for (int s = 0; s < shownN; ++s) {
+    int g = groupOf[s];
+    if (s != groupAnchorPos[g]) continue;
+    const TopoAp& ap = topoAps[shownIdx[s]];
+    int pct = topoFreshPct(now, ap.lastSeenMs);
+    String label = ap.ssid[0] ? clipped(ap.ssid, 10) : String("<hdn>");
+    int lw = label.length() * 6;
+    int lh = 10;
+    int ax = posX[s];
+    int ay = posY[s];
+    int r = nodeRadius[s];
+    int candX[8] = {
+      ax + r + 4,
+      ax - r - 4 - lw,
+      ax - lw / 2,
+      ax - lw / 2,
+      ax + r + 3,
+      ax - r - 3 - lw,
+      ax + r + 3,
+      ax - r - 3 - lw
+    };
+    int candY[8] = {
+      ay - 4,
+      ay - 4,
+      ay - r - 11,
+      ay + r + 3,
+      ay - r - 10,
+      ay - r - 10,
+      ay + r + 2,
+      ay + r + 2
+    };
+    int best = 0;
+    int bestPenalty = 0x7FFFFFFF;
+    int bestDot = -0x7FFFFFFF;
+    int dx = ax - cx;
+    int dy = ay - cy;
+    for (int c = 0; c < 8; ++c) {
+      int lx = candX[c];
+      int ly = candY[c];
+      int clampPenalty = 0;
+      if (lx < 1) {
+        clampPenalty += 1 - lx;
+        lx = 1;
+      }
+      if (lx + lw > kScreenWidth - 1) {
+        clampPenalty += lx + lw - (kScreenWidth - 1);
+        lx = kScreenWidth - 1 - lw;
+      }
+      if (ly < cyTop + 1) {
+        clampPenalty += cyTop + 1 - ly;
+        ly = cyTop + 1;
+      }
+      if (ly > cyBot - lh) {
+        clampPenalty += ly - (cyBot - lh);
+        ly = cyBot - lh;
+      }
+      int penalty = topoLabelPenalty(lx, ly, lw, lh, s, posX, posY, nodeRadius, shownN, labelX, labelY, labelW, labelPlaced, cy) + clampPenalty * 200;
+      int ccx = lx + lw / 2;
+      int ccy = ly + lh / 2;
+      int dot = (ccx - ax) * dx + (ccy - ay) * dy;
+      if (penalty < bestPenalty || (penalty == bestPenalty && dot > bestDot)) {
+        best = c;
+        bestPenalty = penalty;
+        bestDot = dot;
+      }
+    }
+    int lx = candX[best];
+    int ly = candY[best];
+    if (lx < 1) lx = 1;
+    if (lx + lw > kScreenWidth - 1) lx = kScreenWidth - 1 - lw;
+    if (ly < cyTop + 1) ly = cyTop + 1;
+    if (ly > cyBot - lh) ly = cyBot - lh;
+    labelX[s] = lx;
+    labelY[s] = ly;
+    labelW[s] = lw;
+    labelPlaced[s] = true;
+    display.fillRect(lx - 1, ly - 1, lw + 2, lh, kBackground);
+    display.setTextColor(topoDim(ap.isOpen ? kWarn : kForeground, pct), kBackground);
+    display.setCursor(lx, ly);
+    display.print(label);
   }
 
   if (topoNodeCount == 0) {
