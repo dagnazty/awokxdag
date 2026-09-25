@@ -146,31 +146,30 @@ void drawProbeIntel() {
   sortProbeSsids();
   drawHeader("PROBE INTEL",
              String(probeSsidCount) + " SSID(s) | ch " +
-                 String(kDeauthHopChannels[probeHopIndex]));
-  display.setTextSize(1);
-  const int rows = min(probeSsidCount, kVisibleRows);
+                 String(kDeauthHopChannels[probeHopIndex]) +
+                 reconResultPageLabel(probeSsidCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, probeSsidCount - startIdx);
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
-    display.print(clipped(probeSsids[i].ssid, 28));
-    display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("x%lu probes  %d%s dev  %ld dBm",
-                   static_cast<unsigned long>(probeSsids[i].probes),
-                   probeSsids[i].macCount, probeSsids[i].macOverflow ? "+" : "",
-                   static_cast<long>(probeSsids[i].rssi));
+    const int idx = startIdx + i;
+    char det[48];
+    snprintf(det, sizeof(det), "x%lu probes  %d%s dev  %ld dBm",
+             static_cast<unsigned long>(probeSsids[idx].probes),
+             probeSsids[idx].macCount, probeSsids[idx].macOverflow ? "+" : "",
+             static_cast<long>(probeSsids[idx].rssi));
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, probeSsids[idx].ssid, det, kAccent);
   }
   if (probeSsidCount == 0) {
     display.setTextColor(kMuted, kBackground);
     display.setCursor(20, 145);
     display.print("Listening for probe requests...");
   }
-  drawFooter("Back", lastProbeIntelCsvOk ? "Saved" : "Save");
+  drawReconResultFooter("Back", lastProbeIntelCsvOk ? "Saved" : "Save", probeSsidCount);
 }
 
 void startProbeIntel() {
   probeSsidCount = 0;
+  reconResultPage = 0;
   probeHitHead = 0;
   probeHitTail = 0;
   probeHopIndex = 0;

@@ -178,41 +178,40 @@ void drawTrackerScan() {
     if (trackerEntries[i].following) ++trackerFollowingCount;
   }
   drawHeader("BLE TRACKERS",
-             trackerFollowingCount
+             (trackerFollowingCount
                  ? "ALERT: " + String(trackerFollowingCount) + " may follow you"
-                 : String(trackerCount) + " tracker(s) nearby");
-  display.setTextSize(1);
-  const int rows = min(trackerCount, kVisibleRows);
+                 : String(trackerCount) + " tracker(s) nearby") +
+                 reconResultPageLabel(trackerCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, trackerCount - startIdx);
   const uint32_t now = millis();
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    display.setTextColor(trackerEntries[i].following ? kBad : ILI9341_WHITE,
-                         kBackground);
-    display.setCursor(5, y);
-    display.printf("%-8s %s", trackerKindName(trackerEntries[i].kind),
-                   trackerEntries[i].addr.c_str());
-    display.setTextColor(trackerEntries[i].following ? kBad : kMuted,
-                         kBackground);
-    display.setCursor(5, y + 11);
-    const uint32_t span =
-        (now - trackerEntries[i].firstSeenMs) / 1000;  // seconds seen
-    display.printf("%4ld dBm  %lus  x%lu %s",
-                   static_cast<long>(trackerEntries[i].rssi),
-                   static_cast<unsigned long>(span),
-                   static_cast<unsigned long>(trackerEntries[i].sightings),
-                   trackerEntries[i].following ? "FOLLOW" : "");
+    const int idx = startIdx + i;
+    char title[40];
+    snprintf(title, sizeof(title), "%s %s", trackerKindName(trackerEntries[idx].kind),
+             trackerEntries[idx].addr.c_str());
+    const uint32_t span = (now - trackerEntries[idx].firstSeenMs) / 1000;
+    char det[48];
+    snprintf(det, sizeof(det), "%ld dBm  %lus  x%lu %s",
+             static_cast<long>(trackerEntries[idx].rssi),
+             static_cast<unsigned long>(span),
+             static_cast<unsigned long>(trackerEntries[idx].sightings),
+             trackerEntries[idx].following ? "FOLLOW" : "");
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, title, det,
+                 trackerEntries[idx].following ? kBad : kAccent);
   }
   if (trackerCount == 0) {
     display.setTextColor(kMuted, kBackground);
     display.setCursor(20, 145);
     display.print("Scanning for item trackers...");
   }
-  drawFooter("Back", lastTrackerCsvOk ? "Saved" : "Save");
+  drawReconResultFooter("Back", lastTrackerCsvOk ? "Saved" : "Save", trackerCount);
 }
 
 void startTrackerScan() {
   if (!ensureBleReady(false)) return;
   trackerCount = 0;
+  reconResultPage = 0;
   trackerHitHead = 0;
   trackerHitTail = 0;
   trackerFollowingCount = 0;

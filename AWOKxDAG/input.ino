@@ -216,8 +216,10 @@ void handleTouch() {
     if (index < savedCount) openWifiAudit(savedEntries[index], View::kSaved);
     return;
   }
-  if (currentView == View::kBle && y >= 44 && y < 264) {
-    const int index = bleResultIndex((y - 44) / 22);
+  if (currentView == View::kBle && y >= kMenuFirstY && y < kFooterTop) {
+    const int row = (y - kMenuFirstY) / kMenuRowPitch;
+    const int within = (y - kMenuFirstY) - row * kMenuRowPitch;
+    const int index = within < kMenuCardHeight ? bleResultIndex(row) : -1;
     if (index >= 0) {
       openBleDetail(bleEntries[index]);
     }
@@ -273,13 +275,10 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kCameraScan) {
-    if (x < kScreenWidth / 2) {
-      stopCameraScan();
-      drawReconMenu();
-    } else {
-      cameraCount = 0;
-      drawCameraScan();
-    }
+    const int a = reconResultFooterHit(x, cameraCount, true);
+    if (a == 0) { stopCameraScan(); drawReconMenu(); }
+    else if (a == 3) { cameraCount = 0; drawCameraScan(); }
+    else drawCameraScan();
     return;
   }
   if (currentView == View::kLocator) {
@@ -307,8 +306,8 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kWpsScan) {
-    stopWpsScan();
-    drawReconMenu();
+    if (reconResultFooterHit(x, wpsCount, false) == 0) { stopWpsScan(); drawReconMenu(); }
+    else drawWpsScan();
     return;
   }
   if (currentView == View::kRogueWatch) {
@@ -317,38 +316,29 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kHiddenReveal) {
-    stopHiddenReveal();
-    drawReconMenu();
+    if (reconResultFooterHit(x, hiddenCount, false) == 0) { stopHiddenReveal(); drawReconMenu(); }
+    else drawHiddenReveal();
     return;
   }
   if (currentView == View::kSecurityAudit) {
-    if (x < kScreenWidth / 2) {
-      stopSecurityAudit();
-      drawReconMenu();
-    } else {
-      lastAuditCsvOk = exportSecurityAuditToSd();
-      drawSecurityAudit();
-    }
+    const int a = reconResultFooterHit(x, auditCount, true);
+    if (a == 0) { stopSecurityAudit(); drawReconMenu(); }
+    else if (a == 3) { lastAuditCsvOk = exportSecurityAuditToSd(); drawSecurityAudit(); }
+    else drawSecurityAudit();
     return;
   }
   if (currentView == View::kTrackerScan) {
-    if (x < kScreenWidth / 2) {
-      stopTrackerScan();
-      drawReconMenu();
-    } else {
-      lastTrackerCsvOk = exportTrackersToSd();
-      drawTrackerScan();
-    }
+    const int a = reconResultFooterHit(x, trackerCount, true);
+    if (a == 0) { stopTrackerScan(); drawReconMenu(); }
+    else if (a == 3) { lastTrackerCsvOk = exportTrackersToSd(); drawTrackerScan(); }
+    else drawTrackerScan();
     return;
   }
   if (currentView == View::kBleIntel) {
-    if (x < kScreenWidth / 2) {
-      stopBleIntel();
-      drawReconMenu();
-    } else {
-      lastBleIntelCsvOk = exportBleIntelToSd();
-      drawBleIntel();
-    }
+    const int a = reconResultFooterHit(x, bleIntelCount, true);
+    if (a == 0) { stopBleIntel(); drawReconMenu(); }
+    else if (a == 3) { lastBleIntelCsvOk = exportBleIntelToSd(); drawBleIntel(); }
+    else drawBleIntel();
     return;
   }
   if (currentView == View::kSpectrogram) {
@@ -385,13 +375,10 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kProbeIntel) {
-    if (x < kScreenWidth / 2) {
-      stopProbeIntel();
-      drawReconMenu();
-    } else {
-      lastProbeIntelCsvOk = exportProbeIntelToSd();
-      drawProbeIntel();
-    }
+    const int a = reconResultFooterHit(x, probeSsidCount, true);
+    if (a == 0) { stopProbeIntel(); drawReconMenu(); }
+    else if (a == 3) { lastProbeIntelCsvOk = exportProbeIntelToSd(); drawProbeIntel(); }
+    else drawProbeIntel();
     return;
   }
   if (currentView == View::kKarmaWatch) {
@@ -532,13 +519,10 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kClientSniffer) {
-    if (x < kScreenWidth / 2) {
-      stopClientSniffer();
-      drawHome();
-    } else {
-      lastClientCsvOk = exportClientsToSd();
-      drawClientSniffer();
-    }
+    const int a = reconResultFooterHit(x, clientCount, true);
+    if (a == 0) { stopClientSniffer(); drawHome(); }
+    else if (a == 3) { lastClientCsvOk = exportClientsToSd(); drawClientSniffer(); }
+    else drawClientSniffer();
     return;
   }
   if (currentView == View::kAttacks) {

@@ -203,20 +203,18 @@ void drawCameraScan() {
   display.fillScreen(kBackground);
   drawHeader("CAMERAS", String(cameraCount) + " suspected  ch " +
                             String(kDeauthHopChannels[cameraHopIndex]) +
-                            (radiosCoexist ? "" : "  (Wi-Fi only)"));
-  display.setTextSize(1);
-  const int rows = min(cameraCount, kVisibleRows);
+                            (radiosCoexist ? "" : "  (Wi-Fi only)") +
+                            reconResultPageLabel(cameraCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, cameraCount - startIdx);
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    display.setTextColor(kBad, kBackground);
-    display.setCursor(5, y);
-    display.print(clipped(cameraEntries[i].vendor, 15));
-    display.setTextColor(kAccent, kBackground);
-    display.print(cameraEntries[i].ble ? " BLE" : " WiFi");
-    display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("%4ld dBm %s", static_cast<long>(cameraEntries[i].rssi),
-                   cameraEntries[i].mac.c_str());
+    const int idx = startIdx + i;
+    String title = clipped(cameraEntries[idx].vendor, 15) +
+                   (cameraEntries[idx].ble ? " BLE" : " WiFi");
+    char det[40];
+    snprintf(det, sizeof(det), "%ld dBm  %s", static_cast<long>(cameraEntries[idx].rssi),
+             cameraEntries[idx].mac.c_str());
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, title, det, kBad);
   }
   if (cameraCount == 0) {
     display.setTextColor(kMuted, kBackground);
@@ -229,7 +227,7 @@ void drawCameraScan() {
       display.print("BLE off: memory/startup check");
     }
   }
-  drawFooter("Home", "Reset");
+  drawReconResultFooter("Home", "Reset", cameraCount);
 }
 
 // Wi-Fi window hooks: (re)arm promiscuous capture on the current hop channel,
@@ -252,6 +250,7 @@ RadioScheduler cameraSched;
 
 void startCameraScan() {
   cameraCount = 0;
+  reconResultPage = 0;
   cameraHitHead = 0;
   cameraHitTail = 0;
   bleHitHead = 0;

@@ -314,29 +314,26 @@ void drawBleIntel() {
   currentView = View::kBleIntel;
   display.fillScreen(kBackground);
   sortBleIntel();
-  drawHeader("BLE INTEL", String(bleIntelCount) + " device(s) decoded");
-  display.setTextSize(1);
-  const int rows = min(bleIntelCount, kVisibleRows);
+  drawHeader("BLE INTEL", String(bleIntelCount) + " device(s) decoded" +
+                              reconResultPageLabel(bleIntelCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, bleIntelCount - startIdx);
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    const uint16_t ecoColor = bleIntelEcosystemColor(bleIntelEntries[i].ecosystem);
-    display.setTextColor(ecoColor, kBackground);
-    display.setCursor(5, y);
-    display.printf("%-13s %s",
-                   bleIntelEntries[i].deviceType.c_str(),
-                   bleIntelEntries[i].addr.c_str());
-    display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("%4ld dBm  %s",
-                   static_cast<long>(bleIntelEntries[i].rssi),
-                   bleIntelEntries[i].details.c_str());
+    const int idx = startIdx + i;
+    String title = bleIntelEntries[idx].deviceType + " " + bleIntelEntries[idx].addr;
+    char det[48];
+    snprintf(det, sizeof(det), "%ld dBm  %s",
+             static_cast<long>(bleIntelEntries[idx].rssi),
+             bleIntelEntries[idx].details.c_str());
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, title, det,
+                 bleIntelEcosystemColor(bleIntelEntries[idx].ecosystem));
   }
   if (bleIntelCount == 0) {
     display.setTextColor(kMuted, kBackground);
     display.setCursor(20, 145);
     display.print("Scanning BLE ecosystem frames...");
   }
-  drawFooter("Back", lastBleIntelCsvOk ? "Saved" : "Save");
+  drawReconResultFooter("Back", lastBleIntelCsvOk ? "Saved" : "Save", bleIntelCount);
 }
 
 void startBleIntel() {
@@ -350,6 +347,7 @@ void startBleIntel() {
     return;
   }
   bleIntelCount = 0;
+  reconResultPage = 0;
   bleIntelStartMs = millis();
   lastBleIntelDrawMs = 0;
   lastBleIntelCsvOk = false;

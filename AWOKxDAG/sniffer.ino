@@ -141,38 +141,32 @@ void drawClientSniffer() {
   drawHeader("CLIENT SNIFFER",
              String(clientCount) + " clients | ch " +
                  String(kDeauthHopChannels[clientHopIndex]) + " " +
-                 bandLabel(kDeauthHopChannels[clientHopIndex]) + "G");
-  display.setTextSize(1);
-  const int rows = min(clientCount, kVisibleRows);
+                 bandLabel(kDeauthHopChannels[clientHopIndex]) + "G" +
+                 reconResultPageLabel(clientCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, clientCount - startIdx);
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
-    display.print(macToString(clientEntries[i].mac));
-    display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
-    String detail;
-    if (clientEntries[i].lastSsid.length()) {
-      detail = "-> " + clientEntries[i].lastSsid;
-    } else if (clientEntries[i].hasBssid) {
-      detail = "ap " + macToString(clientEntries[i].bssid);
-    } else {
-      detail = "probing";
-    }
-    display.printf("%4ld dBm ch%-3d %s", static_cast<long>(clientEntries[i].rssi),
-                   static_cast<int>(clientEntries[i].channel),
-                   clipped(detail, 22).c_str());
+    const int idx = startIdx + i;
+    String tail;
+    if (clientEntries[idx].lastSsid.length()) tail = "-> " + clientEntries[idx].lastSsid;
+    else if (clientEntries[idx].hasBssid) tail = "ap " + macToString(clientEntries[idx].bssid);
+    else tail = "probing";
+    String detail = String(static_cast<long>(clientEntries[idx].rssi)) + " dBm  ch" +
+                    String(static_cast<int>(clientEntries[idx].channel)) + "  " + tail;
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, macToString(clientEntries[idx].mac),
+                 detail, kAccent);
   }
   if (clientCount == 0) {
     display.setTextColor(kMuted, kBackground);
     display.setCursor(40, 145);
     display.print("Listening for clients...");
   }
-  drawFooter("Home", "Save");
+  drawReconResultFooter("Home", "Save", clientCount);
 }
 
 void startClientSniffer() {
   clientCount = 0;
+  reconResultPage = 0;
   snifferHead = 0;
   snifferTail = 0;
   clientHopIndex = 0;

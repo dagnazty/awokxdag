@@ -3503,7 +3503,7 @@ updateEnabled(); renderConns(); renderStats(); initTopoCanvas();
 async function downloadWardriveCsv(){
   if (!wardriveRows.length){ log("no wardrive rows yet"); return; }
   const header =
-    "WigleWifi-1.6,appRelease=AxD,model=ESP32,release=1.7.4,device=AxD,display=none,board=AxD Bridge,brand=AxD\n" +
+    "WigleWifi-1.6,appRelease=AxD,model=ESP32,release=1.7.5,device=AxD,display=none,board=AxD Bridge,brand=AxD\n" +
     "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type\n";
   const text = header + wardriveRows.join("\n") + "\n";
   const fname = "wardrive-" + Date.now() + ".csv";

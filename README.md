@@ -3,7 +3,7 @@
 **Dual-band Wi-Fi / BLE penetration-testing toolkit for the ESP32-C5** (AWOK Dual
 C5, white-USB screen board with an ILI9341 touchscreen).
 
-- **Version:** 1.7.4
+- **Version:** 1.7.5
 - **Author:** dag nazty
 - **Target:** ESP32-C5 Dev Module, 8 MB flash, PSRAM, microSD
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
@@ -25,8 +25,8 @@ Original **Dual ESP32 Mini v1/v2/v3** builds are available as well.
 ## Features
 
 ### Recon (passive)
-- **Wi-Fi Scan** — dual-band discovery for up to 64 APs: SSID, BSSID, RSSI,
-  channel, band, and advertised auth mode, with Prev/Next paging after ten.
+- **Wi-Fi Scan** — dual-band discovery for up to 64 APs shown as cards (SSID,
+  RSSI, channel, band, auth; saved APs are green), with Prev/Next paging.
   Scans **continuously**, merging by BSSID so the list accumulates every AP seen
   (RSSI refreshed in place) until you select one or leave. Tap a result for a
   passive audit; **Track** graphs its RSSI; **Deauth** targets it; **Grab** jumps

@@ -108,33 +108,34 @@ void drawWpsScan() {
   currentView = View::kWpsScan;
   display.fillScreen(kBackground);
   drawHeader("WPS SCAN", String(wpsCount) + " WPS AP(s) | ch " +
-                             String(kDeauthHopChannels[wpsHopIndex]));
-  display.setTextSize(1);
-  const int rows = min(wpsCount, kVisibleRows);
+                             String(kDeauthHopChannels[wpsHopIndex]) +
+                             reconResultPageLabel(wpsCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, wpsCount - startIdx);
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
-    display.print(clipped(wpsEntries[i].ssid.length() ? wpsEntries[i].ssid
-                                                      : "<hidden>",
-                          22));
-    display.setTextColor(wpsEntries[i].locked ? kMuted : kBad, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("%4ld dBm ch%-3d %s WPS",
-                   static_cast<long>(wpsEntries[i].rssi),
-                   static_cast<int>(wpsEntries[i].channel),
-                   wpsEntries[i].locked ? "LOCKED" : "OPEN");
+    const int idx = startIdx + i;
+    String title = wpsEntries[idx].ssid.length() ? wpsEntries[idx].ssid
+                                                  : String("<hidden>");
+    char det[40];
+    snprintf(det, sizeof(det), "%ld dBm  ch%d  %s WPS",
+             static_cast<long>(wpsEntries[idx].rssi),
+             static_cast<int>(wpsEntries[idx].channel),
+             wpsEntries[idx].locked ? "LOCKED" : "OPEN");
+    // Open WPS is the interesting (attackable) case -> red; locked -> accent.
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, title, det,
+                 wpsEntries[idx].locked ? kAccent : kBad);
   }
   if (wpsCount == 0) {
     display.setTextColor(kMuted, kBackground);
     display.setCursor(40, 145);
     display.print("Listening for WPS beacons...");
   }
-  drawFooter("Back", "Back");
+  drawReconResultFooter("Back", nullptr, wpsCount);
 }
 
 void startWpsScan() {
   wpsCount = 0;
+  reconResultPage = 0;
   wpsHitHead = 0;
   wpsHitTail = 0;
   wpsHopIndex = 0;

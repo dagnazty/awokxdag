@@ -77,6 +77,7 @@ int blePage = 0;
 View currentView = View::kHome;
 View auditReturnView = View::kWifi;
 int reconPage = 0;
+int reconResultPage = 0;  // shared page index for the live scanner result screens
 int reconCategory = -1;  // -1 = category picker; tools return to their category
 int monitorPage = 0;
 int monitorCategory = -1;  // -1 group picker; preserve tool origin on return
@@ -835,6 +836,52 @@ void drawMenuCard(int y, const String& title, const String& detail, uint16_t out
 #endif
 }
 
+// ---- Shared paging for the live scanner result screens ---------------------
+// One card page holds kMenuPerPage entries; reconResultPage is the shared index
+// (only one scanner runs at a time, and each start() resets it).
+int reconResultPages(int count) {
+  return max(1, (count + kMenuPerPage - 1) / kMenuPerPage);
+}
+
+// Header suffix like "  2/5" while there is more than one page (else empty).
+String reconResultPageLabel(int count) {
+  const int pages = reconResultPages(count);
+  if (reconResultPage >= pages) reconResultPage = pages - 1;
+  if (reconResultPage < 0) reconResultPage = 0;
+  return pages > 1 ? "  " + String(reconResultPage + 1) + "/" + String(pages) : "";
+}
+
+// Footer: Back + Prev/Next (and an optional action button) when paged; the plain
+// two-button footer otherwise. `action` is nullptr for Back-only screens.
+void drawReconResultFooter(const char* back, const char* action, int count) {
+  const int pages = reconResultPages(count);
+  if (pages > 1) {
+    if (action) drawFourButtonFooter(back, "Prev", "Next", action);
+    else drawThreeButtonFooter(back, "Prev", "Next");
+  } else {
+    drawFooter(back, action ? action : back);
+  }
+}
+
+// Footer hit-test mirroring drawReconResultFooter. Returns 0=Back, 1=Prev,
+// 2=Next, 3=Action, and advances reconResultPage for Prev/Next.
+int reconResultFooterHit(int x, int count, bool hasAction) {
+  const int pages = reconResultPages(count);
+  if (pages > 1) {
+    if (hasAction) {
+      if (x < 60) return 0;
+      if (x < 120) { reconResultPage = (reconResultPage - 1 + pages) % pages; return 1; }
+      if (x < 180) { reconResultPage = (reconResultPage + 1) % pages; return 2; }
+      return 3;
+    }
+    if (x < 80) return 0;
+    if (x < 160) { reconResultPage = (reconResultPage - 1 + pages) % pages; return 1; }
+    reconResultPage = (reconResultPage + 1) % pages;
+    return 2;
+  }
+  return (hasAction && x >= kScreenWidth / 2) ? 3 : 0;
+}
+
 void drawAboutPage() {
   display.fillScreen(kBackground);
   drawHeader("ABOUT", "AxD");
@@ -1068,13 +1115,13 @@ void drawSavedNetworks() {
 }
 
 int blePageCount() {
-  return max(1, (bleCount + kVisibleRows - 1) / kVisibleRows);
+  return max(1, (bleCount + kMenuPerPage - 1) / kMenuPerPage);
 }
 
-// Maps a visible row to the retained result; the last page may be partial.
+// Maps a visible card row to the retained result; the last page may be partial.
 int bleResultIndex(int row) {
-  if (row < 0 || row >= kVisibleRows) return -1;
-  const int index = blePage * kVisibleRows + row;
+  if (row < 0 || row >= kMenuPerPage) return -1;
+  const int index = blePage * kMenuPerPage + row;
   return index >= 0 && index < bleCount ? index : -1;
 }
 
@@ -1088,24 +1135,18 @@ void drawBleResults() {
   detail +=
       lastBleScanSdWriteOk ? "saved" : (sdReady ? "write error" : "missing");
   drawHeader("BLE RESULTS", detail);
-#ifdef AWOK_MINI_DISPLAY
-  display.selectableRows(min(kVisibleRows, bleCount - blePage * kVisibleRows));
-#endif
-  display.setTextSize(1);
-  for (int row = 0; row < kVisibleRows; ++row) {
+  for (int row = 0; row < kMenuPerPage; ++row) {
     const int i = bleResultIndex(row);
     if (i < 0) break;
-    const int y = 48 + row * 22;
-    display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
-    display.print(clipped(bleEntries[i].flipperLike
-                              ? String("[F?] ") + bleEntries[i].name
-                              : bleEntries[i].name.length() ? bleEntries[i].name : "<unnamed>",
-                          20));
-    display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("%4ld dBm  %s", static_cast<long>(bleEntries[i].rssi),
-                   bleEntries[i].address.c_str());
+    String title = bleEntries[i].flipperLike ? String("[F?] ") + bleEntries[i].name
+                   : bleEntries[i].name.length() ? bleEntries[i].name
+                                                 : String("<unnamed>");
+    char det[48];
+    snprintf(det, sizeof(det), "%ld dBm  %s", static_cast<long>(bleEntries[i].rssi),
+             bleEntries[i].address.c_str());
+    // Flipper-like advertisers flagged red.
+    drawMenuCard(kMenuFirstY + row * kMenuRowPitch, title, det,
+                 bleEntries[i].flipperLike ? kBad : kAccent);
   }
   if (bleCount == 0) {
     display.setTextColor(kMuted, kBackground);

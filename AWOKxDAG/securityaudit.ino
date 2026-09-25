@@ -267,41 +267,39 @@ bool exportSecurityAuditToSd() {
 void drawSecurityAudit() {
   currentView = View::kSecurityAudit;
   display.fillScreen(kBackground);
+  sortAuditByRisk();
   drawHeader("SECURITY AUDIT",
              String(auditCount) + " AP(s) | ch " +
-                 String(kDeauthHopChannels[auditHopIndex]) + " weakest first");
-  display.setTextSize(1);
-  sortAuditByRisk();
-  const int rows = min(auditCount, kVisibleRows);
+                 String(kDeauthHopChannels[auditHopIndex]) + " weakest first" +
+                 reconResultPageLabel(auditCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, auditCount - startIdx);
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
-    display.print(clipped(auditEntries[i].ssid.length() ? auditEntries[i].ssid
-                                                        : "<hidden>",
-                          26));
-    const int risk = auditEntries[i].risk;
-    const uint16_t color = risk >= 70 ? kBad : (risk >= 30 ? kWarn : kGood);
-    display.setTextColor(color, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("%-9s pmf %-3s wps %-4s r%d",
-                   auditEncShort(auditEntries[i].enc),
-                   auditPmfShort(auditEntries[i].pmf),
-                   auditEntries[i].wps == 2 ? "lock"
-                                            : (auditEntries[i].wps == 1 ? "open"
-                                                                        : "-"),
-                   risk);
+    const int idx = startIdx + i;
+    String title = auditEntries[idx].ssid.length() ? auditEntries[idx].ssid
+                                                   : String("<hidden>");
+    const int risk = auditEntries[idx].risk;
+    char det[48];
+    snprintf(det, sizeof(det), "%s  pmf %s  wps %s  r%d",
+             auditEncShort(auditEntries[idx].enc),
+             auditPmfShort(auditEntries[idx].pmf),
+             auditEntries[idx].wps == 2 ? "lock" : (auditEntries[idx].wps == 1 ? "open" : "-"),
+             risk);
+    // Weakest (highest risk) reads red, mid amber, hardened green.
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, title, det,
+                 risk >= 70 ? kBad : (risk >= 30 ? kWarn : kGood));
   }
   if (auditCount == 0) {
     display.setTextColor(kMuted, kBackground);
     display.setCursor(30, 145);
     display.print("Listening for beacons...");
   }
-  drawFooter("Back", lastAuditCsvOk ? "Saved" : "Save");
+  drawReconResultFooter("Back", lastAuditCsvOk ? "Saved" : "Save", auditCount);
 }
 
 void startSecurityAudit() {
   auditCount = 0;
+  reconResultPage = 0;
   auditHitHead = 0;
   auditHitTail = 0;
   auditHopIndex = 0;

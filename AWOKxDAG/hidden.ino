@@ -125,32 +125,31 @@ void drawHiddenReveal() {
   display.fillScreen(kBackground);
   drawHeader("HIDDEN REVEAL",
              String(hiddenRevealedCount) + "/" + String(hiddenCount) +
-                 " revealed | ch " + String(kDeauthHopChannels[hiddenHopIndex]));
-  display.setTextSize(1);
-  const int rows = min(hiddenCount, kVisibleRows);
+                 " revealed | ch " + String(kDeauthHopChannels[hiddenHopIndex]) +
+                 reconResultPageLabel(hiddenCount));
+  const int startIdx = reconResultPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, hiddenCount - startIdx);
   for (int i = 0; i < rows; ++i) {
-    const int y = 48 + i * 22;
-    display.setTextColor(hiddenEntries[i].revealed ? kGood : ILI9341_WHITE,
-                         kBackground);
-    display.setCursor(5, y);
-    display.print(hiddenEntries[i].revealed
-                      ? clipped(hiddenEntries[i].ssid, 22)
-                      : String("(hidden)"));
-    display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("%s ch%-3d", macToString(hiddenEntries[i].bssid).c_str(),
-                   static_cast<int>(hiddenEntries[i].channel));
+    const int idx = startIdx + i;
+    String title = hiddenEntries[idx].revealed ? hiddenEntries[idx].ssid
+                                               : String("(hidden)");
+    char det[40];
+    snprintf(det, sizeof(det), "%s ch%d", macToString(hiddenEntries[idx].bssid).c_str(),
+             static_cast<int>(hiddenEntries[idx].channel));
+    drawMenuCard(kMenuFirstY + i * kMenuRowPitch, title, det,
+                 hiddenEntries[idx].revealed ? kGood : kAccent);
   }
   if (hiddenCount == 0) {
     display.setTextColor(kMuted, kBackground);
     display.setCursor(30, 145);
     display.print("Listening for hidden APs...");
   }
-  drawFooter("Back", "Back");
+  drawReconResultFooter("Back", nullptr, hiddenCount);
 }
 
 void startHiddenReveal() {
   hiddenCount = 0;
+  reconResultPage = 0;
   hiddenRevealedCount = 0;
   hiddenHead = 0;
   hiddenTail = 0;

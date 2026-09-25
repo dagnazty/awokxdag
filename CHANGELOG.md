@@ -5,6 +5,19 @@ All notable changes to AxD are documented here. This project follows
 
 ## [Unreleased]
 
+## [1.7.5] - 2026-09-25
+
+### Changed
+
+- Unified the scan-result screens with the shared card layout (title + one-line
+  detail, 4 per page): Wi-Fi results, BLE Scan, WPS Scan, Hidden SSID, Security
+  Audit, Wi-Fi 6 Intel, BLE Trackers, BLE Intel, Clients, Cameras, and Probe
+  Intel. Card outline conveys state per screen (saved/revealed green, open-WPS /
+  Flipper / camera / following red, risk tiers for the audit, ecosystem color for
+  BLE Intel, generation for Wi-Fi 6). Every result screen now pages with
+  Back/Prev/Next and a page indicator in the header; existing per-screen actions
+  (Save/Export/Reset) and BLE Scan's tap-to-detail are preserved.
+
 ## [1.7.4] - 2026-09-24
 
 ### Changed
@@ -1068,7 +1081,8 @@ All notable changes to AxD are documented here. This project follows
 - Touchscreen UI, SD capture manager, status screens, serial controls, build
   workflow, and recovery documentation.
 
-[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.4...HEAD
+[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.5...HEAD
+[1.7.5]: https://github.com/dagnazty/awokxdag/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/dagnazty/awokxdag/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/dagnazty/awokxdag/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/dagnazty/awokxdag/compare/v1.7.1...v1.7.2
