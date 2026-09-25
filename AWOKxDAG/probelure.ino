@@ -81,12 +81,12 @@ void drawProbeLure() {
   display.setTextSize(1);
   if (lureSsid.length() == 0) {
     display.setTextColor(kWarn, kBackground);
-    display.setCursor(6, 60);
+    display.setCursor(scaleX(6), scaleY(60));
     display.print("No target SSID.");
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, 78);
+    display.setCursor(scaleX(6), scaleY(78));
     display.print("Recon > Wi-Fi Scan, tap a network,");
-    display.setCursor(6, 90);
+    display.setCursor(scaleX(6), scaleY(90));
     display.print("then open Probe Lure.");
     drawFooter("Back", "Back");
     return;
@@ -94,20 +94,20 @@ void drawProbeLure() {
 
   display.setTextSize(2);
   display.setTextColor(probeLureActive ? kBad : kMuted, kBackground);
-  display.setCursor(6, 52);
+  display.setCursor(scaleX(6), scaleY(52));
   display.print(probeLureActive ? "LURING" : "IDLE");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 90);
+  display.setCursor(scaleX(6), scaleY(90));
   display.printf("Channel: %d", static_cast<int>(lureChannel));
-  display.setCursor(6, 104);
+  display.setCursor(scaleX(6), scaleY(104));
   display.printf("Beacons sent: %lu",
                  static_cast<unsigned long>(lureBeaconsSent));
-  display.setCursor(6, 118);
+  display.setCursor(scaleX(6), scaleY(118));
   display.printf("Probes for SSID: %lu",
                  static_cast<unsigned long>(lureProbes));
-  display.setCursor(6, 132);
+  display.setCursor(scaleX(6), scaleY(132));
   display.print("Last client: ");
   if (lureHaveClient) {
     uint8_t mac[6];
@@ -117,16 +117,16 @@ void drawProbeLure() {
     display.print("none");
   }
 
-  display.drawFastHLine(6, 152, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(152), scaleX(228), kPanel);
   display.setTextColor(kBad, kBackground);
-  display.setCursor(6, 162);
+  display.setCursor(scaleX(6), scaleY(162));
   display.print("Authorized testing only.");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 178);
+  display.setCursor(scaleX(6), scaleY(178));
   display.print("Impersonates one named network to");
-  display.setCursor(6, 190);
+  display.setCursor(scaleX(6), scaleY(190));
   display.print("lure its clients. Use only where you");
-  display.setCursor(6, 202);
+  display.setCursor(scaleX(6), scaleY(202));
   display.print("are permitted to test that network.");
   drawFooter("Back", probeLureActive ? "Stop" : "Start");
 }

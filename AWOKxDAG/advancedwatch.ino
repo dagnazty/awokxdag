@@ -760,40 +760,40 @@ void drawAdvancedWatch() {
                                       : "Wi-Fi only; Mini BLE off"));
   display.setTextSize(2);
   display.setTextColor(alert ? kBad : kGood, kBackground);
-  display.setCursor(6, 48);
+  display.setCursor(scaleX(6), scaleY(48));
   display.print(alert ? "ALERT" : "ALL CLEAR");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 76);
+  display.setCursor(scaleX(6), scaleY(76));
   display.printf("Alerts %lu | APs %d | ch %d",
                  static_cast<unsigned long>(advancedAlertTotal),
                  advancedApCount, kDeauthHopChannels[advancedHopIndex]);
-  display.setCursor(6, 92);
+  display.setCursor(scaleX(6), scaleY(92));
   display.printf("Beacon integrity %lu | saved down %lu",
                  static_cast<unsigned long>(advancedIntegrityAlerts),
                  static_cast<unsigned long>(advancedSavedDowngradeAlerts));
-  display.setCursor(6, 108);
+  display.setCursor(scaleX(6), scaleY(108));
   display.printf("Disconnect %lu/w  peak %lu  alerts %lu",
                  static_cast<unsigned long>(advancedDisconnectRate),
                  static_cast<unsigned long>(advancedDisconnectPeak),
                  static_cast<unsigned long>(advancedDisconnectAlerts));
-  display.setCursor(6, 124);
+  display.setCursor(scaleX(6), scaleY(124));
   display.printf("EAPOL %lu/w  peak %lu  alerts %lu",
                  static_cast<unsigned long>(advancedEapolRate),
                  static_cast<unsigned long>(advancedEapolPeak),
                  static_cast<unsigned long>(advancedEapolAlerts));
-  display.setCursor(6, 140);
+  display.setCursor(scaleX(6), scaleY(140));
   display.printf("Auth/assoc %lu/w peak %lu alerts %lu",
                  static_cast<unsigned long>(advancedAssocRate),
                  static_cast<unsigned long>(advancedAssocPeak),
                  static_cast<unsigned long>(advancedAssocAlerts));
-  display.setCursor(6, 156);
+  display.setCursor(scaleX(6), scaleY(156));
   display.printf("CSA %lu/w alerts %lu | RF %d/%d dBm",
                  static_cast<unsigned long>(advancedCsaRate),
                  static_cast<unsigned long>(advancedCsaAlerts),
                  advancedNoiseCurrent, advancedNoiseBaseline);
-  display.setCursor(6, 172);
+  display.setCursor(scaleX(6), scaleY(172));
   if (radiosCoexist) {
     display.printf("RF alerts %lu | BLE churn %lu",
                    static_cast<unsigned long>(advancedRfAlerts),
@@ -803,22 +803,22 @@ void drawAdvancedWatch() {
                    static_cast<unsigned long>(advancedRfAlerts));
   }
 
-  display.drawFastHLine(6, 190, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(190), scaleX(228), kPanel);
   display.setTextColor(advancedAlertTotal ? kBad : kMuted, kBackground);
-  display.setCursor(6, 199);
+  display.setCursor(scaleX(6), scaleY(199));
   display.print("Last: ");
   display.print(clipped(advancedLastAlert, 30));
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 214);
+  display.setCursor(scaleX(6), scaleY(214));
   display.print(clipped(advancedLastDetails, 37));
   if (advancedLastDetails.length() > 37) {
-    display.setCursor(6, 227);
+    display.setCursor(scaleX(6), scaleY(227));
     display.print(clipped(advancedLastDetails.substring(37), 37));
   }
-  display.setCursor(6, 247);
+  display.setCursor(scaleX(6), scaleY(247));
   display.print(advancedLogReady ? "SD: advanced_watch.csv"
                                  : "SD log unavailable; live view only");
-  display.setCursor(6, 260);
+  display.setCursor(scaleX(6), scaleY(260));
   display.print("Passive heuristics; verify alerts manually.");
   drawFooter(advancedWatchActive ? "Stop" : "Back", "Reset");
 }

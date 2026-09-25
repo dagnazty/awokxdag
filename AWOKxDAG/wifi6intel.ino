@@ -290,9 +290,9 @@ void drawWifi6Intel() {
 #ifdef AWOK_MINI_DISPLAY
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(2, 46);
+  display.setCursor(scaleX(2), scaleY(46));
   display.printf("AX:%-2d AC:%-2d N:%-2d", axCount, acCount, nCount);
-  display.setCursor(2, 58);
+  display.setCursor(scaleX(2), scaleY(58));
   display.printf("BSS Colors: %d/63", distinctColors);
 
   const int startIdx = wifi6Page * kWifi6RowsPerPage;
@@ -301,7 +301,7 @@ void drawWifi6Intel() {
     const auto& ap = wifi6Aps[startIdx + i];
     const int y = 70 + i * 11;
     display.setTextColor(ap.generation == 6 ? ILI9341_GREEN : (ap.generation == 5 ? ILI9341_CYAN : 0x7BEF), kBackground);
-    display.setCursor(2, y);
+    display.setCursor(scaleX(2), scaleY(y));
     display.printf("%-1.1s Ch%-2u %-7.7s", (ap.generation == 6 ? "6" : "5"), ap.channel, ap.ssid[0] ? ap.ssid : "<hid>");
   }
   if (pages > 1) {
@@ -315,19 +315,19 @@ void drawWifi6Intel() {
   // Touch screen display (240x320)
   display.setTextSize(1);
   display.setTextColor(0x7BEF, kBackground);
-  display.setCursor(10, 42);
+  display.setCursor(scaleX(10), scaleY(42));
   display.print("GEN  CH  COLOR   WIDTH  RSSI  SSID");
 
-  display.drawFastHLine(8, 52, 224, 0x3186);
+  display.drawFastHLine(scaleX(8), scaleY(52), scaleX(224), 0x3186);
 
   constexpr int kRowY = 56;
   constexpr int kRowH = 22;
 
   if (wifi6ApCount == 0) {
     display.setTextColor(0x7BEF, kBackground);
-    display.setCursor(20, 120);
+    display.setCursor(scaleX(20), scaleY(120));
     display.print("Listening for 802.11ax...");
-    display.setCursor(20, 134);
+    display.setCursor(scaleX(20), scaleY(134));
     display.print("Dual-band Beacons & Probes");
   } else {
     const int startIdx = wifi6Page * kWifi6RowsPerPage;
@@ -343,42 +343,42 @@ void drawWifi6Intel() {
       if (ap.generation == 5) { genCol = ILI9341_CYAN; genLabel = "5"; }
       else if (ap.generation == 4) { genCol = 0x7BEF; genLabel = "4"; }
 
-      display.fillRect(8, y, 14, 13, genCol);
+      display.fillRect(scaleX(8), scaleY(y), scaleX(14), scaleY(13), genCol);
       display.setTextColor(ILI9341_BLACK, genCol);
-      display.setCursor(12, y + 3);
+      display.setCursor(scaleX(12), scaleY(y + 3));
       display.print(genLabel);
 
       // Channel
       display.setTextColor(ILI9341_WHITE, kBackground);
-      display.setCursor(28, y + 3);
+      display.setCursor(scaleX(28), scaleY(y + 3));
       display.printf("%-2u", ap.channel);
 
       // BSS Color Pill
       if (ap.bssColor > 0) {
         const uint16_t cCol = wifi6ColorToRgb(ap.bssColor);
-        display.drawRoundRect(46, y, 32, 13, 3, cCol);
+        display.drawRoundRect(scaleX(46), scaleY(y), scaleX(32), scaleY(13), 3, cCol);
         display.setTextColor(cCol, kBackground);
-        display.setCursor(50, y + 3);
+        display.setCursor(scaleX(50), scaleY(y + 3));
         display.printf("C%02u", ap.bssColor);
       } else {
         display.setTextColor(0x7BEF, kBackground);
-        display.setCursor(50, y + 3);
+        display.setCursor(scaleX(50), scaleY(y + 3));
         display.print("--");
       }
 
       // Width
       display.setTextColor(0x8410, kBackground);
-      display.setCursor(84, y + 3);
+      display.setCursor(scaleX(84), scaleY(y + 3));
       display.printf("%3uM", ap.channelWidth);
 
       // RSSI
       display.setTextColor(ap.rssi >= -65 ? ILI9341_GREEN : (ap.rssi >= -80 ? ILI9341_YELLOW : ILI9341_RED), kBackground);
-      display.setCursor(120, y + 3);
+      display.setCursor(scaleX(120), scaleY(y + 3));
       display.printf("%3d", ap.rssi);
 
       // SSID
       display.setTextColor(ILI9341_WHITE, kBackground);
-      display.setCursor(150, y + 3);
+      display.setCursor(scaleX(150), scaleY(y + 3));
       const char* s = ap.ssid[0] ? ap.ssid : "<hidden>";
       char buf[14];
       strncpy(buf, s, sizeof(buf) - 1);

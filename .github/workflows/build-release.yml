@@ -27,6 +27,10 @@ jobs:
             define: AWOK_DUAL_C5_TOUCH
             label: "Dual C5 Touch"
             fqbn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled"
+          - variant: pancake
+            define: PANCAKE_C5
+            label: "Pancake C5"
+            fqbn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled"
           - variant: mini
             define: AWOK_DUAL_C5_MINI
             label: "Dual C5 Mini"
@@ -88,19 +92,33 @@ jobs:
           arduino-cli config init
           arduino-cli config add board_manager.additional_urls \
             https://espressif.github.io/arduino-esp32/package_esp32_index.json
-          arduino-cli core update-index
-          arduino-cli core install esp32:esp32@3.3.10
+          # The Espressif/Arduino download CDN intermittently returns 504s on
+          # the core's tool downloads (e.g. mklittlefs), which fails the whole
+          # matrix. Retry with backoff so a transient hiccup doesn't block the
+          # build; update-index + install are both idempotent/resumable.
+          for i in 1 2 3 4 5; do
+            arduino-cli core update-index && \
+            arduino-cli core install esp32:esp32@3.3.10 && break
+            echo "::warning::core install attempt $i failed; retrying in 30s"
+            sleep 30
+          done
+          arduino-cli core list | grep -q "esp32:esp32" \
+            || { echo "::error::esp32 core install failed after retries"; exit 1; }
 
       - name: Install libraries
         run: |
-          arduino-cli lib install \
-            "Adafruit GFX Library" \
-            "Adafruit ILI9341" \
-            "Adafruit ST7735 and ST7789 Library" \
-            "Adafruit BusIO" \
-            "NimBLE-Arduino@2.5.1" \
-            "XPT2046_Touchscreen" \
-            "TinyGPSPlus"
+          for i in 1 2 3 4 5; do
+            arduino-cli lib install \
+              "Adafruit GFX Library" \
+              "Adafruit ILI9341" \
+              "Adafruit ST7735 and ST7789 Library" \
+              "Adafruit BusIO" \
+              "NimBLE-Arduino@2.5.1" \
+              "XPT2046_Touchscreen" \
+              "TinyGPSPlus" && break
+            echo "::warning::lib install attempt $i failed; retrying in 20s"
+            sleep 20
+          done
 
       - name: Compile ${{ matrix.label }} (produces the merged image)
         if: ${{ !matrix.board }}

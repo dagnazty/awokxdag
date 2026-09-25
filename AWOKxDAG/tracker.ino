@@ -188,12 +188,12 @@ void drawTrackerScan() {
     const int y = 48 + i * 22;
     display.setTextColor(trackerEntries[i].following ? kBad : ILI9341_WHITE,
                          kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.printf("%-8s %s", trackerKindName(trackerEntries[i].kind),
                    trackerEntries[i].addr.c_str());
     display.setTextColor(trackerEntries[i].following ? kBad : kMuted,
                          kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     const uint32_t span =
         (now - trackerEntries[i].firstSeenMs) / 1000;  // seconds seen
     display.printf("%4ld dBm  %lus  x%lu %s",
@@ -204,7 +204,7 @@ void drawTrackerScan() {
   }
   if (trackerCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 145);
+    display.setCursor(scaleX(20), scaleY(145));
     display.print("Scanning for item trackers...");
   }
   drawFooter("Back", lastTrackerCsvOk ? "Saved" : "Save");

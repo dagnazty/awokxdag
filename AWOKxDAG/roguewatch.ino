@@ -135,12 +135,12 @@ void drawRogueWatch() {
                                 : "watching for AP impersonation");
   display.setTextSize(2);
   display.setTextColor(rogueAlertCount ? kBad : kGood, kBackground);
-  display.setCursor(6, 50);
+  display.setCursor(scaleX(6), scaleY(50));
   display.print(rogueAlertCount ? "SUSPECT APs" : "ALL CLEAR");
 
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 78);
+  display.setCursor(scaleX(6), scaleY(78));
   display.printf("%d AP(s) seen | %d alert(s) | ch %d", rogueApCount,
                  rogueAlertCount, kDeauthHopChannels[rogueHopIndex]);
 
@@ -149,19 +149,19 @@ void drawRogueWatch() {
     if (!rogueAps[i].suspicious) continue;
     const int y = 96 + row * 20;
     display.setTextColor(kBad, kBackground);
-    display.setCursor(6, y);
+    display.setCursor(scaleX(6), scaleY(y));
     display.print(clipped(rogueAps[i].ssid.length() ? rogueAps[i].ssid
                                                     : "<hidden>",
                           20));
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, y + 9);
+    display.setCursor(scaleX(6), scaleY(y + 9));
     display.printf("%s %s", macToString(rogueAps[i].bssid).c_str(),
                    rogueAps[i].savedTwin ? "saved-twin" : "multi-BSSID");
     ++row;
   }
   if (rogueAlertCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, 110);
+    display.setCursor(scaleX(6), scaleY(110));
     display.print("No SSID seen on two BSSIDs yet.");
   }
   drawFooter(rogueWatchActive ? "Stop" : "Back", "Home");

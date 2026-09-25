@@ -87,53 +87,53 @@ void drawDeauthMonitor() {
                                    : "listening for deauth frames");
   display.setTextSize(2);
   display.setTextColor(total ? kBad : kGood, kBackground);
-  display.setCursor(6, 52);
+  display.setCursor(scaleX(6), scaleY(52));
   display.print(total ? "ATTACK SEEN" : "ALL CLEAR");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 84);
+  display.setCursor(scaleX(6), scaleY(84));
   display.printf("Deauth frames:   %lu",
                  static_cast<unsigned long>(deauthFrameCount));
-  display.setCursor(6, 98);
+  display.setCursor(scaleX(6), scaleY(98));
   display.printf("Disassoc frames: %lu",
                  static_cast<unsigned long>(disassocFrameCount));
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 118);
+  display.setCursor(scaleX(6), scaleY(118));
   display.printf("Scanning ch %d (%s GHz hop)",
                  kDeauthHopChannels[deauthHopIndex],
                  bandLabel(kDeauthHopChannels[deauthHopIndex]));
   const uint32_t elapsed = (millis() - deauthMonitorStartMs) / 1000;
-  display.setCursor(6, 132);
+  display.setCursor(scaleX(6), scaleY(132));
   display.printf("Elapsed: %lus", static_cast<unsigned long>(elapsed));
 
-  display.drawFastHLine(6, 148, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(148), scaleX(228), kPanel);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 156);
+  display.setCursor(scaleX(6), scaleY(156));
   display.print("LAST OFFENDING FRAME");
   display.setTextColor(ILI9341_WHITE, kBackground);
   if (haveDeauthHit) {
-    display.setCursor(6, 172);
+    display.setCursor(scaleX(6), scaleY(172));
     display.print("Src:   ");
     display.print(macToString(lastDeauthSource));
-    display.setCursor(6, 186);
+    display.setCursor(scaleX(6), scaleY(186));
     display.print("BSSID: ");
     display.print(macToString(lastDeauthBssid));
-    display.setCursor(6, 200);
+    display.setCursor(scaleX(6), scaleY(200));
     display.printf("Channel %d   %d dBm", static_cast<int>(lastDeauthChannel),
                    static_cast<int>(lastDeauthRssi));
   } else {
-    display.setCursor(6, 172);
+    display.setCursor(scaleX(6), scaleY(172));
     display.print("None yet");
   }
 
   display.setTextColor(deauthLogReady ? kAccent : kMuted, kBackground);
-  display.setCursor(6, 222);
+  display.setCursor(scaleX(6), scaleY(222));
   display.print(deauthLogReady ? "SD log: latest_deauth_log.csv"
                                : "SD log unavailable; live view only");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 242);
+  display.setCursor(scaleX(6), scaleY(242));
   display.print("Passive monitor; nothing transmitted.");
   drawFooter(deauthMonitorActive ? "Stop" : "Back", "Reset");
 }
@@ -281,12 +281,12 @@ void drawDeauthSelect() {
     const int y = 48 + i * 22;
     const bool selected = isDeauthTarget(wifiEntries[i]);
     display.setTextColor(selected ? kBad : ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(selected ? "[x] " : "[ ] ");
     display.print(clipped(
         wifiEntries[i].ssid.length() ? wifiEntries[i].ssid : "<hidden>", 16));
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("%4ld dBm  ch%-3ld %sG  %s",
                    static_cast<long>(wifiEntries[i].rssi),
                    static_cast<long>(wifiEntries[i].channel),
@@ -295,7 +295,7 @@ void drawDeauthSelect() {
   }
   if (wifiCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(40, 145);
+    display.setCursor(scaleX(40), scaleY(145));
     display.print("Run a Wi-Fi scan first");
   }
   drawThreeButtonFooter("Back", "Clear", "Attack");
@@ -334,7 +334,7 @@ void drawDeauthAttack() {
     const int y = 48 + i * 13;
     const bool current = deauthAttackActive && i == deauthTargetCursor;
     display.setTextColor(current ? kBad : ILI9341_WHITE, kBackground);
-    display.setCursor(6, y);
+    display.setCursor(scaleX(6), scaleY(y));
     display.printf("ch%-3d %sG  %s", static_cast<int>(deauthTargets[i].channel),
                    bandLabel(deauthTargets[i].channel),
                    clipped(deauthTargets[i].ssid.length()
@@ -345,35 +345,35 @@ void drawDeauthAttack() {
   }
   if (deauthTargetCount == 0) {
     display.setTextColor(kWarn, kBackground);
-    display.setCursor(6, 48);
+    display.setCursor(scaleX(6), scaleY(48));
     display.print("No targets; pick some first.");
   }
 
   display.setTextSize(2);
   display.setTextColor(deauthAttackActive ? kBad : kMuted, kBackground);
-  display.setCursor(6, 120);
+  display.setCursor(scaleX(6), scaleY(120));
   display.print(deauthAttackActive ? "TRANSMITTING" : "IDLE");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 150);
+  display.setCursor(scaleX(6), scaleY(150));
   display.printf("Frames sent: %lu",
                  static_cast<unsigned long>(deauthFramesSent));
   const uint32_t elapsed =
       deauthAttackActive ? (millis() - deauthAttackStartMs) / 1000 : 0;
-  display.setCursor(6, 164);
+  display.setCursor(scaleX(6), scaleY(164));
   display.printf("Elapsed: %lus", static_cast<unsigned long>(elapsed));
 
-  display.drawFastHLine(6, 182, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(182), scaleX(228), kPanel);
   display.setTextColor(kBad, kBackground);
-  display.setCursor(6, 190);
+  display.setCursor(scaleX(6), scaleY(190));
   display.print("Authorized testing only.");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 206);
+  display.setCursor(scaleX(6), scaleY(206));
   display.print("Deauth disrupts service on every");
-  display.setCursor(6, 218);
+  display.setCursor(scaleX(6), scaleY(218));
   display.print("selected AP. Only run against a");
-  display.setCursor(6, 230);
+  display.setCursor(scaleX(6), scaleY(230));
   display.print("network you may lawfully test.");
   drawConfirmBanner();
   drawFooter("Back", deauthAttackActive ? "Stop" : "Start");

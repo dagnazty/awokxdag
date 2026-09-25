@@ -568,7 +568,7 @@ void drawTopologyMap() {
 
   for (int a = 0; a < topoApCount && linesRendered < kMiniMaxLines; ++a) {
     display.setTextColor(topoAps[a].isOpen ? kWarn : kAccent, kBackground);
-    display.setCursor(4, y);
+    display.setCursor(scaleX(4), scaleY(y));
     display.printf("[%d] %s (%d)", topoAps[a].channel,
                    clipped(topoAps[a].ssid[0] ? topoAps[a].ssid : macToString(topoAps[a].bssid), 11).c_str(),
                    topoAps[a].clientCount);
@@ -578,7 +578,7 @@ void drawTopologyMap() {
     for (int c = 0; c < topoClientCount && linesRendered < kMiniMaxLines; ++c) {
       if (!topoClients[c].hasBssid || memcmp(topoClients[c].bssid, topoAps[a].bssid, 6) != 0) continue;
       display.setTextColor(kForeground, kBackground);
-      display.setCursor(12, y);
+      display.setCursor(scaleX(12), scaleY(y));
       display.printf("> %02X:%02X %ddB", topoClients[c].mac[4], topoClients[c].mac[5], topoClients[c].rssi);
       y += 12;
       ++linesRendered;
@@ -587,7 +587,7 @@ void drawTopologyMap() {
 
   if (topoApCount == 0 && topoClientCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(10, 60);
+    display.setCursor(scaleX(10), scaleY(60));
     display.print("Sniffing links...");
   }
 #else
@@ -597,7 +597,7 @@ void drawTopologyMap() {
 
   for (int a = 0; a < topoApCount && linesRendered < kTouchMaxLines; ++a) {
     display.setTextColor(topoAps[a].isOpen ? kWarn : kAccent, kBackground);
-    display.setCursor(6, y);
+    display.setCursor(scaleX(6), scaleY(y));
     display.printf("[Ch %2d] %s", topoAps[a].channel,
                    clipped(topoAps[a].ssid[0] ? topoAps[a].ssid : "<hidden>", 20).c_str());
     if (topoAps[a].isOpen) {
@@ -612,7 +612,7 @@ void drawTopologyMap() {
     for (int c = 0; c < topoClientCount && linesRendered < kTouchMaxLines; ++c) {
       if (!topoClients[c].hasBssid || memcmp(topoClients[c].bssid, topoAps[a].bssid, 6) != 0) continue;
       display.setTextColor(kForeground, kBackground);
-      display.setCursor(18, y);
+      display.setCursor(scaleX(18), scaleY(y));
       display.printf("-> %s  %d dBm  (%d pkts)",
                      macToString(topoClients[c].mac).c_str(),
                      topoClients[c].rssi,
@@ -625,7 +625,7 @@ void drawTopologyMap() {
   // If room left, show probe leaks
   for (int p = 0; p < topoProbeCount && linesRendered < kTouchMaxLines; ++p) {
     display.setTextColor(kAccent, kBackground);
-    display.setCursor(6, y);
+    display.setCursor(scaleX(6), scaleY(y));
     display.printf("[PRB] %02X:%02X -> \"%s\" (%d dBm)",
                    topoProbes[p].clientMac[4], topoProbes[p].clientMac[5],
                    clipped(topoProbes[p].ssid, 14).c_str(),
@@ -636,7 +636,7 @@ void drawTopologyMap() {
 
   if (topoApCount == 0 && topoClientCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 140);
+    display.setCursor(scaleX(20), scaleY(140));
     display.print("Sniffing 802.11 client-AP associations & probes...");
   }
 #endif

@@ -106,17 +106,17 @@ void drawFilesManager() {
     const String name = fileBaseName(fileRows[fileSelected].name);
     display.setTextSize(1); display.setTextColor(ILI9341_WHITE, kBackground);
     for (int line = 0; line < 4 && line * 37 < int(name.length()); ++line) {
-      display.setCursor(8, 50 + line * 12);
+      display.setCursor(scaleX(8), scaleY(50 + line * 12));
       display.print(line == 3 ? clipped(name.substring(line * 37), 37) : name.substring(line * 37, (line + 1) * 37));
     }
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(8, 106); display.print(String("Type: ") + kFileFilters[fileKind(name)]);
-    display.setCursor(8, 120); display.print("Size: " + String(fileRows[fileSelected].size) + " bytes");
-    display.setCursor(8, 134); display.print("Modified: " + fileModifiedLabel(fileRows[fileSelected].modified));
-    display.setCursor(8, 160); display.print("Preview / download on your phone:");
-    display.setCursor(8, 174); display.print("Website > SD Files > select file");
+    display.setCursor(scaleX(8), scaleY(106)); display.print(String("Type: ") + kFileFilters[fileKind(name)]);
+    display.setCursor(scaleX(8), scaleY(120)); display.print("Size: " + String(fileRows[fileSelected].size) + " bytes");
+    display.setCursor(scaleX(8), scaleY(134)); display.print("Modified: " + fileModifiedLabel(fileRows[fileSelected].modified));
+    display.setCursor(scaleX(8), scaleY(160)); display.print("Preview / download on your phone:");
+    display.setCursor(scaleX(8), scaleY(174)); display.print("Website > SD Files > select file");
     if (fileNotice.length() || fileSelectionProtected()) {
-      display.setTextColor(kWarn, kBackground); display.setCursor(8, 196);
+      display.setTextColor(kWarn, kBackground); display.setCursor(scaleX(8), scaleY(196));
       display.print(fileSelectionProtected() ? "Stop wardriving before deleting." : clipped(fileNotice, 37));
     }
     if (fileConfirmDelete) {
@@ -140,20 +140,20 @@ void drawFilesManager() {
     display.button(8, y, 224, kFileCardHeight,
         (name + " | " + fileSizeLabel(fileRows[idx].size)).c_str(), kAccent);
 #else
-    display.drawRoundRect(8, y, 224, kFileCardHeight, 4, kPanel);
+    display.drawRoundRect(scaleX(8), scaleY(y), scaleX(224), scaleY(kFileCardHeight), 4, kPanel);
     display.setTextSize(1); display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(16, y + 7); display.print(clipped(name, 34));
-    display.setTextColor(kMuted, kBackground); display.setCursor(16, y + 24);
+    display.setCursor(scaleX(16), scaleY(y + 7)); display.print(clipped(name, 34));
+    display.setTextColor(kMuted, kBackground); display.setCursor(scaleX(16), scaleY(y + 24));
     display.print(fileSizeLabel(fileRows[idx].size) + " | " + kFileFilters[fileKind(name)]);
 #endif
   }
   if (!fileViewCount) {
     display.setTextSize(1); display.setTextColor(kMuted, kBackground);
-    display.setCursor(12, 120); display.print(!sdReady ? "SD not mounted" : fileRowCount ? "No files match this filter" : "No captures on SD");
-    display.setCursor(12, 138); display.print("Use Filter & refresh above.");
+    display.setCursor(scaleX(12), scaleY(120)); display.print(!sdReady ? "SD not mounted" : fileRowCount ? "No files match this filter" : "No captures on SD");
+    display.setCursor(scaleX(12), scaleY(138)); display.print("Use Filter & refresh above.");
   }
   display.setTextSize(1); display.setTextColor(fileNotice.length() ? kWarn : kMuted, kBackground);
-  display.setCursor(8, 268); display.print(fileNotice.length() ? clipped(fileNotice, 37) : "Newest first | tap a file for details");
+  display.setCursor(scaleX(8), scaleY(268)); display.print(fileNotice.length() ? clipped(fileNotice, 37) : "Newest first | tap a file for details");
   drawSmallButton(4, 280, 72, 36, "Back", kMuted);
   if (filePage > 0) drawSmallButton(84, 280, 72, 36, "Prev", kAccent);
   if (filePage + 1 < filePageCount()) drawSmallButton(164, 280, 72, 36, "Next", kAccent);

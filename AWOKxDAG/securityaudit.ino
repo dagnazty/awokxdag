@@ -276,14 +276,14 @@ void drawSecurityAudit() {
   for (int i = 0; i < rows; ++i) {
     const int y = 48 + i * 22;
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(clipped(auditEntries[i].ssid.length() ? auditEntries[i].ssid
                                                         : "<hidden>",
                           26));
     const int risk = auditEntries[i].risk;
     const uint16_t color = risk >= 70 ? kBad : (risk >= 30 ? kWarn : kGood);
     display.setTextColor(color, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("%-9s pmf %-3s wps %-4s r%d",
                    auditEncShort(auditEntries[i].enc),
                    auditPmfShort(auditEntries[i].pmf),
@@ -294,7 +294,7 @@ void drawSecurityAudit() {
   }
   if (auditCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(30, 145);
+    display.setCursor(scaleX(30), scaleY(145));
     display.print("Listening for beacons...");
   }
   drawFooter("Back", lastAuditCsvOk ? "Saved" : "Save");

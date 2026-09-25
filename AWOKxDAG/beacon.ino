@@ -66,34 +66,34 @@ void drawBeaconFlood() {
   drawHeader("BEACON FLOOD", "broadcasting fake test APs");
   display.setTextSize(2);
   display.setTextColor(beaconFloodActive ? kBad : kMuted, kBackground);
-  display.setCursor(6, 54);
+  display.setCursor(scaleX(6), scaleY(54));
   display.print(beaconFloodActive ? "FLOODING" : "IDLE");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 92);
+  display.setCursor(scaleX(6), scaleY(92));
   display.printf("Frames sent: %lu",
                  static_cast<unsigned long>(beaconFramesSent));
-  display.setCursor(6, 106);
+  display.setCursor(scaleX(6), scaleY(106));
   display.printf("Channel: %d (2.4 GHz cycle)",
                  kBeaconChannels[beaconChannelIndex]);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 120);
+  display.setCursor(scaleX(6), scaleY(120));
   display.print("Last SSID: ");
   display.print(clipped(lastBeaconSsid, 24));
 
-  display.drawFastHLine(6, 140, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(140), scaleX(228), kPanel);
   display.setTextColor(kBad, kBackground);
-  display.setCursor(6, 150);
+  display.setCursor(scaleX(6), scaleY(150));
   display.print("Authorized testing only.");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 168);
+  display.setCursor(scaleX(6), scaleY(168));
   display.print("Floods the air with bogus SSIDs");
-  display.setCursor(6, 180);
+  display.setCursor(scaleX(6), scaleY(180));
   display.print("and can disrupt nearby clients.");
-  display.setCursor(6, 192);
+  display.setCursor(scaleX(6), scaleY(192));
   display.print("Use only where you are allowed");
-  display.setCursor(6, 204);
+  display.setCursor(scaleX(6), scaleY(204));
   display.print("to transmit.");
   drawFooter("Back", beaconFloodActive ? "Stop" : "Start");
 }

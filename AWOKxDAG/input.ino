@@ -4,6 +4,17 @@ bool readTouch(int& screenX, int& screenY) {
 #ifdef AWOK_MINI_DISPLAY
   return digitalRead(AwokPins::kButtonCenter) == LOW &&
          display.selection(screenX, screenY);
+#elif defined(PANCAKE_CAP_TOUCH)
+  // Drawing scales design coordinates up to the 320x480 panel; touch does the
+  // inverse, mapping FT6336 panel coordinates back into the 240x320 design grid
+  // so every touch-zone comparison stays authored in design units.
+  uint16_t panelX = 0, panelY = 0;
+  if (!touch.read(panelX, panelY)) return false;
+  screenX = constrain(int(panelX) * kDesignWidth / AwokST7796::kPanelW, 0,
+                      kDesignWidth - 1);
+  screenY = constrain(int(panelY) * kDesignHeight / AwokST7796::kPanelH, 0,
+                      kDesignHeight - 1);
+  return true;
 #else
   if (!touch.touched()) return false;
   TS_Point point = touch.getPoint();
@@ -118,7 +129,7 @@ void handleTouch() {
       drawHome();
       return;
     }
-    if (y < kFooterTop) {
+    if (y < kFooterTopDesign) {
       const int start = homePage * kHomeTilesPerPage;
       const int rows = min(kHomeTilesPerPage, kHomeTileCount - start);
       for (int row = 0; row < rows; ++row) {
@@ -133,10 +144,10 @@ void handleTouch() {
     // Footer paging mirrors drawHome: Prev on the left of later pages, Next on
     // the right while more pages remain. The version-label slots do nothing.
     const int pages = homePageCount();
-    if (homePage > 0 && x < kScreenWidth / 2) {
+    if (homePage > 0 && x < kDesignWidth / 2) {
       homePage -= 1;
       drawHome();
-    } else if (homePage + 1 < pages && x >= kScreenWidth / 2) {
+    } else if (homePage + 1 < pages && x >= kDesignWidth / 2) {
       homePage += 1;
       drawHome();
     }
@@ -157,7 +168,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kRecon) {
-    if (y < kFooterTop) {
+    if (y < kFooterTopDesign) {
       const int start = reconPage * kMenuPerPage;
       for (int row = 0; row < kMenuPerPage; ++row) {
         const int position = start + row;
@@ -225,7 +236,7 @@ void handleTouch() {
     }
     return;
   }
-  if (currentView == View::kAttacks && y < kFooterTop) {
+  if (currentView == View::kAttacks && y < kFooterTopDesign) {
     if (y >= 44 && y < 82) {
       startBeaconFlood();
     } else if (y >= 86 && y < 124) {
@@ -240,17 +251,19 @@ void handleTouch() {
   if (currentView == View::kTopologyMap) {
     extern bool topoGraphMode;
     extern bool topoGraphTap(int, int);
-    if (y < kFooterTop) {
-      if (topoGraphMode && y >= kHeaderHeight) {
-        topoGraphTap(x, y);
+    if (y < kFooterTopDesign) {
+      if (topoGraphMode && y >= kHeaderHeightDesign) {
+        // The graph lays out in physical panel space (kScreenWidth/kHeaderHeight
+        // /kFooterTop), so hit-test with physical coordinates, not design ones.
+        topoGraphTap(scaleX(x), scaleY(y));
         drawTopologyMap();
       }
       return;
     }
-    if (x < kScreenWidth / 3) {
+    if (x < kDesignWidth / 3) {
       stopTopologyMap();
       drawReconMenu();
-    } else if (x < (kScreenWidth * 2) / 3) {
+    } else if (x < (kDesignWidth * 2) / 3) {
       topoGraphMode = !topoGraphMode;
       drawTopologyMap();
     } else {
@@ -259,14 +272,14 @@ void handleTouch() {
     }
     return;
   }
-  if (y < kFooterTop) return;
+  if (y < kFooterTopDesign) return;
   if (currentView == View::kPacketMon) {
     stopPacketMon();
     drawReconMenu();
     return;
   }
   if (currentView == View::kCameraScan) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopCameraScan();
       drawReconMenu();
     } else {
@@ -306,7 +319,7 @@ void handleTouch() {
   }
   if (currentView == View::kRogueWatch) {
     returnToMonitor(1);
-    if (x >= kScreenWidth / 2) drawHome();
+    if (x >= kDesignWidth / 2) drawHome();
     return;
   }
   if (currentView == View::kHiddenReveal) {
@@ -315,7 +328,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kSecurityAudit) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopSecurityAudit();
       drawReconMenu();
     } else {
@@ -325,7 +338,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kTrackerScan) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopTrackerScan();
       drawReconMenu();
     } else {
@@ -335,7 +348,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kBleIntel) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopBleIntel();
       drawReconMenu();
     } else {
@@ -345,8 +358,8 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kSpectrogram) {
-    if (y >= kFooterTop) {
-      const int zone = x / (kScreenWidth / 4);
+    if (y >= kFooterTopDesign) {
+      const int zone = x / (kDesignWidth / 4);
       if (zone <= 0) {
         stopSpectrogram();
         drawReconMenu();
@@ -368,7 +381,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kHarvester) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopHarvester();
       drawReconMenu();
     } else {
@@ -378,7 +391,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kProbeIntel) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopProbeIntel();
       drawReconMenu();
     } else {
@@ -388,7 +401,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kKarmaWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(3);
     } else {
       resetKarmaWatch();
@@ -397,7 +410,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kBeaconWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(4);
     } else {
       resetBeaconWatch();
@@ -406,7 +419,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kAuthFlood) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(5);
     } else {
       resetAuthFlood();
@@ -415,7 +428,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kAdvancedWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(6);
     } else {
       resetAdvancedWatch();
@@ -482,7 +495,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kDeauthMonitor) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(0);
     } else {
       deauthFrameCount = 0;
@@ -494,7 +507,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kDeauthAttack) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopDeauthAttack();
       if (deauthAttackReturnView == View::kDeauthSelect) {
         drawDeauthSelect();
@@ -512,7 +525,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kHandshake) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopHandshakeCapture();
       drawWifiAudit();
     } else {
@@ -525,7 +538,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kClientSniffer) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopClientSniffer();
       drawHome();
     } else {
@@ -539,7 +552,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kWardrive) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopWardrive();
       drawGps();
     } else {
@@ -549,7 +562,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kBeaconFlood) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopBeaconFlood();
       drawAttacksMenu();
     } else if (beaconFloodActive) {
@@ -561,7 +574,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kBleSpamWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(2);
     } else {
       bleDetectTotal = 0;
@@ -575,7 +588,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kProbeLure) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopProbeLure();
       drawAttacksMenu();
     } else if (probeLureActive) {
@@ -587,7 +600,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kEvilPortal) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopEvilPortal();
       drawAttacksMenu();
     } else {
@@ -668,7 +681,7 @@ void handleTouch() {
       } else {
         scanBle();
       }
-    } else if (x < kScreenWidth / 2) {
+    } else if (x < kDesignWidth / 2) {
       drawHome();
     } else {
       scanBle();
@@ -676,7 +689,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kBleDetail) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       drawBleResults();
     } else {
       scanBle();
@@ -717,7 +730,7 @@ void handleTouch() {
     }
     return;
   }
-  if (x < kScreenWidth / 2) {
+  if (x < kDesignWidth / 2) {
     drawHome();
   } else if (currentView == View::kChannels) {
     scanWifiForChannelMap();

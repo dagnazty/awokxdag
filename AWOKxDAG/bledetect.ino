@@ -83,37 +83,37 @@ void drawBleDetect() {
                             : "listening for advert floods");
   display.setTextSize(2);
   display.setTextColor(bleDetectAlert ? kBad : kGood, kBackground);
-  display.setCursor(6, 52);
+  display.setCursor(scaleX(6), scaleY(52));
   display.print(bleDetectAlert ? "SPAM SEEN" : "CLEAR");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 90);
+  display.setCursor(scaleX(6), scaleY(90));
   display.printf("Spam adverts/win: %lu",
                  static_cast<unsigned long>(bleDetectRate));
-  display.setCursor(6, 104);
+  display.setCursor(scaleX(6), scaleY(104));
   display.printf("Total adverts: %lu",
                  static_cast<unsigned long>(bleDetectTotal));
-  display.setCursor(6, 118);
+  display.setCursor(scaleX(6), scaleY(118));
   display.printf("Spam adverts: %lu",
                  static_cast<unsigned long>(bleDetectSpam));
-  display.setCursor(6, 132);
+  display.setCursor(scaleX(6), scaleY(132));
   display.printf("Peak/win: %lu   thr %lu",
                  static_cast<unsigned long>(bleDetectPeakRate),
                  static_cast<unsigned long>(kBleDetectSpamThreshold));
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 152);
+  display.setCursor(scaleX(6), scaleY(152));
   display.print("Last spam vendor: ");
   display.print(bleVendorName(bleDetectLastVendor));
 
-  display.drawFastHLine(6, 172, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(172), scaleX(228), kPanel);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 182);
+  display.setCursor(scaleX(6), scaleY(182));
   display.print("Passive; nothing transmitted. Many");
-  display.setCursor(6, 194);
+  display.setCursor(scaleX(6), scaleY(194));
   display.print("random-address vendor adverts in a");
-  display.setCursor(6, 206);
+  display.setCursor(scaleX(6), scaleY(206));
   display.print("short window indicate a spammer.");
   drawFooter(bleDetectActive ? "Stop" : "Back", "Reset");
 }

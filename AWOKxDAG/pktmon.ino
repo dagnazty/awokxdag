@@ -92,41 +92,41 @@ void drawPacketMon() {
              pktmonFileOpen ? "capturing to pktmon.pcap" : "live counts only");
   display.setTextSize(2);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 52);
+  display.setCursor(scaleX(6), scaleY(52));
   display.printf("%lu pkts", static_cast<unsigned long>(pktTotal));
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 90);
+  display.setCursor(scaleX(6), scaleY(90));
   display.printf("Mgmt: %lu", static_cast<unsigned long>(pktMgmt));
-  display.setCursor(6, 104);
+  display.setCursor(scaleX(6), scaleY(104));
   display.printf("Data: %lu", static_cast<unsigned long>(pktData));
-  display.setCursor(6, 118);
+  display.setCursor(scaleX(6), scaleY(118));
   display.printf("Ctrl: %lu", static_cast<unsigned long>(pktCtrl));
 
   const uint32_t elapsed = (millis() - pktmonStartMs) / 1000;
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 138);
+  display.setCursor(scaleX(6), scaleY(138));
   display.printf("Rate: %lu pkt/s",
                  static_cast<unsigned long>(elapsed ? pktTotal / elapsed : 0));
-  display.setCursor(6, 152);
+  display.setCursor(scaleX(6), scaleY(152));
   display.printf("Channel %d %sG   %lus",
                  kDeauthHopChannels[pktmonHopIndex],
                  bandLabel(kDeauthHopChannels[pktmonHopIndex]),
                  static_cast<unsigned long>(elapsed));
 
-  display.drawFastHLine(6, 172, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(172), scaleX(228), kPanel);
   display.setTextColor(pktmonFileOpen ? kAccent : kWarn, kBackground);
-  display.setCursor(6, 182);
+  display.setCursor(scaleX(6), scaleY(182));
   display.printf("Written: %lu frame(s)",
                  static_cast<unsigned long>(pktWritten));
-  display.setCursor(6, 196);
+  display.setCursor(scaleX(6), scaleY(196));
   display.print(pktmonFileOpen ? "SD: pktmon.pcap (open in Wireshark)"
                                : "SD unavailable; counts only");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 216);
+  display.setCursor(scaleX(6), scaleY(216));
   display.print("Hops 2.4/5 GHz; drops payload if the");
-  display.setCursor(6, 228);
+  display.setCursor(scaleX(6), scaleY(228));
   display.print("SD write cannot keep up (counts stay).");
   drawFooter("Home", "Home");
 }

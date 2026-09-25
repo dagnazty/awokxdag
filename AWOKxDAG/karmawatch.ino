@@ -112,12 +112,12 @@ void drawKarmaWatch() {
                                 : "watching for Karma / fake AP");
   display.setTextSize(2);
   display.setTextColor(karmaAlertCount ? kBad : kGood, kBackground);
-  display.setCursor(6, 50);
+  display.setCursor(scaleX(6), scaleY(50));
   display.print(karmaAlertCount ? "KARMA AP" : "ALL CLEAR");
 
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 78);
+  display.setCursor(scaleX(6), scaleY(78));
   display.printf("%d AP(s) | %d alert(s) | ch %d", karmaApCount, karmaAlertCount,
                  kDeauthHopChannels[karmaHopIndex]);
 
@@ -126,11 +126,11 @@ void drawKarmaWatch() {
     if (!karmaAps[i].suspicious) continue;
     const int y = 96 + row * 20;
     display.setTextColor(kBad, kBackground);
-    display.setCursor(6, y);
+    display.setCursor(scaleX(6), scaleY(y));
     display.printf("%s  %d%s SSIDs", macToString(karmaAps[i].bssid).c_str(),
                    karmaAps[i].ssidCount, karmaAps[i].overflow ? "+" : "");
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, y + 9);
+    display.setCursor(scaleX(6), scaleY(y + 9));
     String names;
     for (int s = 0; s < karmaAps[i].ssidCount && s < 3; ++s) {
       if (s) names += ", ";
@@ -141,7 +141,7 @@ void drawKarmaWatch() {
   }
   if (karmaAlertCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, 110);
+    display.setCursor(scaleX(6), scaleY(110));
     display.printf("No AP claiming %d+ SSIDs yet.", kKarmaSsidThreshold);
   }
   drawFooter(karmaWatchActive ? "Stop" : "Back", "Reset");

@@ -152,10 +152,10 @@ void drawProbeIntel() {
   for (int i = 0; i < rows; ++i) {
     const int y = 48 + i * 22;
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(clipped(probeSsids[i].ssid, 28));
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("x%lu probes  %d%s dev  %ld dBm",
                    static_cast<unsigned long>(probeSsids[i].probes),
                    probeSsids[i].macCount, probeSsids[i].macOverflow ? "+" : "",
@@ -163,7 +163,7 @@ void drawProbeIntel() {
   }
   if (probeSsidCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 145);
+    display.setCursor(scaleX(20), scaleY(145));
     display.print("Listening for probe requests...");
   }
   drawFooter("Back", lastProbeIntelCsvOk ? "Saved" : "Save");

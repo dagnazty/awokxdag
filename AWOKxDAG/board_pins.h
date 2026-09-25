@@ -1,7 +1,8 @@
 #pragma once
 
 // Explicit board profiles; reject mismatched silicon before touching GPIOs.
-#if (defined(AWOK_DUAL_C5_TOUCH) + defined(AWOK_DUAL_C5_MINI) + \
+#if (defined(AWOK_DUAL_C5_TOUCH) + defined(PANCAKE_C5) + \
+     defined(AWOK_DUAL_C5_MINI) + \
      defined(AWOK_DUAL_C5_BRIDGE) + \
      defined(AWOK_DUAL_ESP32_TOUCH_V1) + defined(AWOK_DUAL_ESP32_TOUCH_V2) + \
      defined(AWOK_DUAL_ESP32_TOUCH_V3) + \
@@ -29,6 +30,14 @@
 #if defined(AWOK_DUAL_C5_MINI) || defined(AWOK_DUAL_ESP32_MINI_V1) || \
     defined(AWOK_DUAL_ESP32_MINI_V2) || defined(AWOK_DUAL_ESP32_MINI_V3)
 #define AWOK_MINI_DISPLAY
+#endif
+// Pancake C5: a generic ESP32-C5-DevKitC board (NOT an AWOK board) with an
+// ST7796 320x480 panel rendered natively (the 240x320 UI is scaled to it via
+// scaleX/scaleY), plus an FT6336 capacitive touch controller on I2C (no
+// resistive XPT2046 chip).
+#if defined(PANCAKE_C5)
+#define PANCAKE_DISPLAY
+#define PANCAKE_CAP_TOUCH
 #endif
 #if defined(AWOK_DUAL_ESP32_MINI_V1) || defined(AWOK_DUAL_ESP32_MINI_V2) || \
     defined(AWOK_DUAL_ESP32_MINI_V3) || \
@@ -125,6 +134,27 @@ constexpr bool kDualBand = false;
 #else
 constexpr char kChipLabel[] = "ESP32-C5";
 constexpr bool kDualBand = true;
+#if defined(PANCAKE_DISPLAY)
+// Pancake C5 (ESP32-C5-DevKitC-1 + 3.5" ST7796): shared FSPI bus for TFT + SD,
+// FT6336 capacitive touch on I2C. Pins from ESP32_FlipSocial's Pancake profile
+// (User_Setup_marauder_pancake.h / configs.h).
+constexpr int kSpiSck = 23;
+constexpr int kSpiMiso = 4;
+constexpr int kSpiMosi = 24;
+constexpr int kDisplayCs = 5;
+constexpr int kDisplayDc = 3;
+constexpr int kDisplayReset = 2;
+constexpr char kBoardLabel[] = "Pancake C5";
+constexpr int kBacklight = 26;
+constexpr bool kBacklightOn = true;
+constexpr int kTouchCs = -1;  // FT6336 is I2C-only; no SPI chip select
+constexpr int kSdCs = 7;
+// Capacitive touch (also shared by the MAX17048 fuel gauge) on the I2C bus.
+constexpr int kI2cSda = 9;
+constexpr int kI2cScl = 10;
+constexpr int kTouchReset = 8;
+constexpr int kStatusLed = 27;  // single addressable RGB LED
+#else
 constexpr int kSpiSck = 6;
 constexpr int kSpiMiso = 2;
 constexpr int kSpiMosi = 7;
@@ -154,6 +184,7 @@ constexpr bool kBacklightOn = true;
 constexpr int kTouchCs = 3;
 #endif
 constexpr int kSdCs = 10;
+#endif  // PANCAKE_DISPLAY
 
 constexpr int kGpsUart = 1;
 constexpr int kGpsRx = 14;  // ESP RX <- GPS TX

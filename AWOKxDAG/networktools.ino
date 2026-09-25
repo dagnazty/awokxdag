@@ -160,7 +160,7 @@ void netFooter(const char* left, const char* right) {
 }
 void netText(int y, const String& value) {
   display.setTextSize(1); display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
 #ifdef AWOK_MINI_DISPLAY
   display.print(value);
 #else
@@ -179,12 +179,12 @@ void netCard(int row, const String& title, const String& detail) {
 #ifdef AWOK_MINI_DISPLAY
   display.button(8, y, 224, 44, (title + " | " + detail).c_str(), kAccent);
 #else
-  display.drawRoundRect(8, y, 224, 44, 5, kAccent);
+  display.drawRoundRect(scaleX(8), scaleY(y), scaleX(224), scaleY(44), 5, kAccent);
   display.setTextSize(title.length() <= 17 ? 2 : 1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(16, y + 5); display.print(clipped(title, 34));
+  display.setCursor(scaleX(16), scaleY(y + 5)); display.print(clipped(title, 34));
   display.setTextSize(1); display.setTextColor(kMuted, kBackground);
-  display.setCursor(16, y + 29); display.print(clipped(detail, 34));
+  display.setCursor(scaleX(16), scaleY(y + 29)); display.print(clipped(detail, 34));
 #endif
 }
 void netPager(const char* back, int page, int pages, bool allowBack) {
@@ -292,43 +292,48 @@ void drawNetworkEditor() {
 #else
   display.fillScreen(kBackground);
   drawHeader(netEditPassword ? "PASSWORD" : "NETWORK SSID", "Repeat tap: cycle   # next letter");
-  display.fillRoundRect(6, 45, 228, 28, 5, kPanel);
-  display.drawRoundRect(6, 45, 228, 28, 5, kAccent);
+  display.fillRoundRect(scaleX(6), scaleY(45), scaleX(228), scaleY(28), 5, kPanel);
+  display.drawRoundRect(scaleX(6), scaleY(45), scaleX(228), scaleY(28), 5, kAccent);
   display.setTextWrap(false);
   display.setTextSize(2);
   display.setTextColor(ILI9341_WHITE, kPanel);
-  display.setCursor(12, 51);
+  display.setCursor(scaleX(12), scaleY(51));
   // Show the tail rather than clipping the new characters off the right.
   if (preview.length() > 17) preview = preview.substring(preview.length() - 17);
   display.print(preview);
   display.print(netKeyTap.index >= 0 ? '^' : '_');
   display.setTextSize(1);
   display.setTextColor(netEdit.length() == size_t(limit) ? kWarn : kMuted, kBackground);
-  display.setCursor(8, 79);
+  display.setCursor(scaleX(8), scaleY(79));
   display.printf("%u/%d%s", unsigned(netEdit.length()), limit,
                  netEdit.length() == size_t(limit) ? "  Full" : "");
-  display.setCursor(148, 79);
+  display.setCursor(scaleX(148), scaleY(79));
   display.printf("%s  %s", AwokKeyboard::modeName(netKeyMode),
                  netKeyTap.index >= 0 ? "Cycling" : "Ready");
+  // key() rects are design-space (so hit() matches design-space touch); draw
+  // each scaled up, centring the native-size label within the scaled rect.
   for (int i = 0; i < AwokKeyboard::kSlots; ++i) {
     const auto key = AwokKeyboard::key(i, netKeyMode);
     if (!key.valid()) continue;
+    const int kx = scaleX(key.x), ky = scaleY(key.y);
+    const int kw = scaleX(key.x + key.w) - kx, kh = scaleY(key.y + key.h) - ky;
     const uint16_t color = key.action == AwokKeyboard::Done ? kGood :
         key.action == AwokKeyboard::Delete ? kWarn :
         key.action == AwokKeyboard::Cancel ? kMuted : kAccent;
-    display.fillRoundRect(key.x, key.y, key.w, key.h, 3, kPanel);
-    display.drawRoundRect(key.x, key.y, key.w, key.h, 3, color);
+    display.fillRoundRect(kx, ky, kw, kh, 3, kPanel);
+    display.drawRoundRect(kx, ky, kw, kh, 3, color);
     const bool group = key.sublabel[0];
     const int size = strlen(key.label) == 1 ? 2 : 1;
     display.setTextSize(size);
     display.setTextColor(ILI9341_WHITE, kPanel);
-    display.setCursor(key.x + (key.w - int(strlen(key.label)) * 6 * size) / 2,
-                      key.y + (group ? 4 : (key.h - 8 * size) / 2));
+    display.setCursor(kx + (kw - int(strlen(key.label)) * 6 * size) / 2,
+                      ky + (group ? scaleY(4) : (kh - 8 * size) / 2));
     display.print(key.label);
     if (group) {
       display.setTextSize(1);
       display.setTextColor(color, kPanel);
-      display.setCursor(key.x + (key.w - int(strlen(key.sublabel)) * 6) / 2, key.y + 26);
+      display.setCursor(kx + (kw - int(strlen(key.sublabel)) * 6) / 2,
+                        ky + scaleY(26));
       display.print(key.sublabel);
     }
   }

@@ -280,6 +280,10 @@ void screenTestAdvance() {
 }
 
 void handleScreenTestTouch(int x, int y) {
+  // The screen test draws in the panel's physical space (kTestW/kTestH); taps
+  // arrive in the 240x320 design grid, so scale them up to match its zones.
+  x = scaleX(x);
+  y = scaleY(y);
   if (screenTestStep == kScreenTestIntro) {
     if (x < kTestW / 2) {
       stopScreenTest();
@@ -331,6 +335,15 @@ void updateScreenTest() {
     if (digitalRead(AwokPins::kButtonRight) == LOW) screenTestButtons |= 8;
     if (digitalRead(AwokPins::kButtonDown) == LOW) screenTestButtons |= 16;
     if (screenTestButtons != before) drawScreenTest();
+  }
+#elif defined(PANCAKE_CAP_TOUCH)
+  if (screenTestStep == kScreenTestInput) {
+    uint16_t panelX = 0, panelY = 0;
+    if (touch.read(panelX, panelY)) {
+      screenTestRawX = panelX;   // raw ST7796 panel coordinates (0..319/0..479)
+      screenTestRawY = panelY;
+      screenTestRawZ = 0;        // capacitive touch reports no pressure
+    }
   }
 #else
   if (screenTestStep == kScreenTestInput && touch.touched()) {

@@ -114,12 +114,12 @@ void drawWpsScan() {
   for (int i = 0; i < rows; ++i) {
     const int y = 48 + i * 22;
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(clipped(wpsEntries[i].ssid.length() ? wpsEntries[i].ssid
                                                       : "<hidden>",
                           22));
     display.setTextColor(wpsEntries[i].locked ? kMuted : kBad, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("%4ld dBm ch%-3d %s WPS",
                    static_cast<long>(wpsEntries[i].rssi),
                    static_cast<int>(wpsEntries[i].channel),
@@ -127,7 +127,7 @@ void drawWpsScan() {
   }
   if (wpsCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(40, 145);
+    display.setCursor(scaleX(40), scaleY(145));
     display.print("Listening for WPS beacons...");
   }
   drawFooter("Back", "Back");

@@ -74,14 +74,42 @@ bool radiosCoexist = false;
 #else
 bool radiosCoexist = true;
 #endif
+#ifdef PANCAKE_DISPLAY
+#include "pancake_display.h"    // native 320x480 ST7796 buffer (UI scaled via scaleX/scaleY)
+#include "pancake_touch.h"      // FT6336 capacitive controller (I2C)
+#else
 #include "touch_display.h"     // buffered ILI9341 wrapper (kills refresh flicker)
-#include "boot_screen_data.h"  // 240x320 Touch splash; unused on the Mini
+#endif
+#include "boot_screen_data.h"  // 240x320 splash (Touch; centered on Pancake); unused on the Mini
 #endif
 
+// The UI is authored in a 240x320 design grid. On boards whose panel matches
+// that (Dual C5 Touch, classic ESP32) the scale helpers fold to the identity,
+// so layout geometry (positions and sizes) is unchanged from before the port.
+// Pancake's ST7796 is a true 320x480 panel: kScreenWidth/kScreenHeight below
+// become 320/480 and every layout coordinate is scaled through scaleX()/
+// scaleY(), so the UI is laid out and rendered natively at full resolution (no
+// image scaling, crisp text). Width-aware text (charsForWidth/drawWrappedText,
+// e.g. Wi-Fi Audit) additionally uses the extra width on Pancake.
+constexpr int kDesignWidth = 240;
+constexpr int kDesignHeight = 320;
+#ifdef PANCAKE_DISPLAY
+constexpr int kScreenWidth = 320;
+constexpr int kScreenHeight = 480;
+#else
 constexpr int kScreenWidth = 240;
 constexpr int kScreenHeight = 320;
-constexpr int kHeaderHeight = 42;
-constexpr int kFooterTop = 278;
+#endif
+// Scale a design-grid X/width or Y/height to the actual panel. constexpr, so on
+// a 240x320 panel these fold to the input value (identity -> no regression).
+constexpr int scaleX(int v) { return v * kScreenWidth / kDesignWidth; }
+constexpr int scaleY(int v) { return v * kScreenHeight / kDesignHeight; }
+// Design-grid metrics (touch handling works in design space; see readTouch).
+constexpr int kHeaderHeightDesign = 42;
+constexpr int kFooterTopDesign = 278;
+// Physical metrics used by drawing code.
+constexpr int kHeaderHeight = scaleY(kHeaderHeightDesign);
+constexpr int kFooterTop = scaleY(kFooterTopDesign);
 // Classic ESP32 has a much smaller statically addressable DRAM segment and no
 // verified PSRAM on these display pins. Keep bounded tables within its budget.
 constexpr int kResultCapacity = AwokPins::kDualBand ? 64 : 32;

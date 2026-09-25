@@ -209,23 +209,23 @@ void drawCameraScan() {
   for (int i = 0; i < rows; ++i) {
     const int y = 48 + i * 22;
     display.setTextColor(kBad, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(clipped(cameraEntries[i].vendor, 15));
     display.setTextColor(kAccent, kBackground);
     display.print(cameraEntries[i].ble ? " BLE" : " WiFi");
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("%4ld dBm %s", static_cast<long>(cameraEntries[i].rssi),
                    cameraEntries[i].mac.c_str());
   }
   if (cameraCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(30, 140);
+    display.setCursor(scaleX(30), scaleY(140));
     display.print("Scanning for cameras...");
-    display.setCursor(30, 156);
+    display.setCursor(scaleX(30), scaleY(156));
     display.print("Heuristic; not exhaustive");
     if (!radiosCoexist) {
-      display.setCursor(30, 172);
+      display.setCursor(scaleX(30), scaleY(172));
       display.print("BLE off: memory/startup check");
     }
   }

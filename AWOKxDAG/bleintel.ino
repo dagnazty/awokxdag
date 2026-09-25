@@ -321,19 +321,19 @@ void drawBleIntel() {
     const int y = 48 + i * 22;
     const uint16_t ecoColor = bleIntelEcosystemColor(bleIntelEntries[i].ecosystem);
     display.setTextColor(ecoColor, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.printf("%-13s %s",
                    bleIntelEntries[i].deviceType.c_str(),
                    bleIntelEntries[i].addr.c_str());
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("%4ld dBm  %s",
                    static_cast<long>(bleIntelEntries[i].rssi),
                    bleIntelEntries[i].details.c_str());
   }
   if (bleIntelCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 145);
+    display.setCursor(scaleX(20), scaleY(145));
     display.print("Scanning BLE ecosystem frames...");
   }
   drawFooter("Back", lastBleIntelCsvOk ? "Saved" : "Save");

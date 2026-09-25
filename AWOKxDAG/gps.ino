@@ -672,19 +672,19 @@ void drawGps() {
   drawSmallButton(164, 280, 72, 36, "Diag", kAccent);
 #else
   display.setTextSize(2); display.setTextColor(fix ? kGood : kWarn, kBackground);
-  display.setCursor(8, 52); display.print(gpsReceptionLabel());
+  display.setCursor(scaleX(8), scaleY(52)); display.print(gpsReceptionLabel());
   display.setTextSize(1); display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(8, 88); display.print("Satellites: " + sats + "   HDOP: " + hdop);
-  display.setCursor(8, 106); display.print("Speed: " + speed + "   Alt: " + altitude);
+  display.setCursor(scaleX(8), scaleY(88)); display.print("Satellites: " + sats + "   HDOP: " + hdop);
+  display.setCursor(scaleX(8), scaleY(106)); display.print("Speed: " + speed + "   Alt: " + altitude);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(8, 134); display.print("LOCAL TIME");
+  display.setCursor(scaleX(8), scaleY(134)); display.print("LOCAL TIME");
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(8, 148); display.print(local);
+  display.setCursor(scaleX(8), scaleY(148)); display.print(local);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(8, 162); display.print(gpsTimezoneLabel());
+  display.setCursor(scaleX(8), scaleY(162)); display.print(gpsTimezoneLabel());
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(8, 190); display.print(fix ? "Lat: " + String(gps.location.lat(), 6) : "Lat: -- (waiting for fix)");
-  display.setCursor(8, 204); display.print(fix ? "Lon: " + String(gps.location.lng(), 6) : "Lon: -- (waiting for fix)");
+  display.setCursor(scaleX(8), scaleY(190)); display.print(fix ? "Lat: " + String(gps.location.lat(), 6) : "Lat: -- (waiting for fix)");
+  display.setCursor(scaleX(8), scaleY(204)); display.print(fix ? "Lon: " + String(gps.location.lng(), 6) : "Lon: -- (waiting for fix)");
   drawSmallButton(8, 228, 224, 42, "Diagnostics", kAccent);
   drawSmallButton(4, 280, 112, 36, "Home", kMuted);
   drawSmallButton(124, 280, 112, 36, "Drive modes", kAccent);
@@ -699,19 +699,19 @@ void drawGpsDiagnostics() {
   const uint32_t passed = gps.passedChecksum();
   const uint32_t passedHere = passed >= gpsBaudBaselinePassed ? passed - gpsBaudBaselinePassed : passed;
   display.setTextSize(1); display.setTextColor(kAccent, kBackground);
-  display.setCursor(8, 50); display.print(gpsReceptionLabel());
+  display.setCursor(scaleX(8), scaleY(50)); display.print(gpsReceptionLabel());
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(8, 68); display.printf("UART%d  RX %d  TX %d", AwokPins::kGpsUart, AwokPins::kGpsRx, AwokPins::kGpsTx);
-  display.setCursor(8, 84); display.printf("Chars %lu | valid %lu", (unsigned long)gps.charsProcessed(), (unsigned long)passed);
-  display.setCursor(8, 100); display.printf("This baud %lu | bad %lu", (unsigned long)passedHere, (unsigned long)gps.failedChecksum());
-  display.setCursor(8, 116); display.print("Last: " + clipped(String(gpsLastSentence), 30));
+  display.setCursor(scaleX(8), scaleY(68)); display.printf("UART%d  RX %d  TX %d", AwokPins::kGpsUart, AwokPins::kGpsRx, AwokPins::kGpsTx);
+  display.setCursor(scaleX(8), scaleY(84)); display.printf("Chars %lu | valid %lu", (unsigned long)gps.charsProcessed(), (unsigned long)passed);
+  display.setCursor(scaleX(8), scaleY(100)); display.printf("This baud %lu | bad %lu", (unsigned long)passedHere, (unsigned long)gps.failedChecksum());
+  display.setCursor(scaleX(8), scaleY(116)); display.print("Last: " + clipped(String(gpsLastSentence), 30));
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(8, 140);
+  display.setCursor(scaleX(8), scaleY(140));
   if (!gpsDataSeen || millis() - gpsLastDataMs >= 5000) display.print("Check power, wiring, and baud rate.");
   else if (!passedHere) display.print("Data received; try another baud.");
   else if (!gpsHasFix()) display.print("Valid data; move to open sky.");
   else display.print("Receiver has a valid position fix.");
-  display.setCursor(8, 156); display.print("Raw NMEA is sent to USB Serial.");
+  display.setCursor(scaleX(8), scaleY(156)); display.print("Raw NMEA is sent to USB Serial.");
   drawSmallButton(8, 180, 224, 40, "Baud: " + String(gpsCurrentBaud) + " / change", kAccent);
   drawSmallButton(8, 228, 224, 40, String("Raw NMEA: ") + (gpsRawEcho ? "On" : "Off"), kAccent);
   drawSmallButton(4, 280, 112, 36, "Back", kMuted);
@@ -737,11 +737,11 @@ void drawDriveMenu() {
   drawSmallButton(8, 116, 224, 44, "Split / two boards", kAccent);
   drawSmallButton(8, 184, 224, 44, "Fleet / multiple boards", kAccent);
   display.setTextSize(1); display.setTextColor(kMuted, kBackground);
-  display.setCursor(8, 98); display.print("One board | Wi-Fi + BLE");
-  display.setCursor(8, 166); display.print("Pair boards | Wi-Fi | separate CSVs");
-  display.setCursor(8, 234); display.print("Coordinator + workers | merged CSV");
+  display.setCursor(scaleX(8), scaleY(98)); display.print("One board | Wi-Fi + BLE");
+  display.setCursor(scaleX(8), scaleY(166)); display.print("Pair boards | Wi-Fi | separate CSVs");
+  display.setCursor(scaleX(8), scaleY(234)); display.print("Coordinator + workers | merged CSV");
   display.setTextColor(kWarn, kBackground);
-  display.setCursor(8, 256); display.print(clipped(gpsMenuNotice, 37));
+  display.setCursor(scaleX(8), scaleY(256)); display.print(clipped(gpsMenuNotice, 37));
   drawSmallButton(4, 280, 112, 36, "Back", kMuted);
   drawSmallButton(124, 280, 112, 36, "Home", kAccent);
 }
@@ -803,11 +803,11 @@ void handleGpsTouch(int x, int y) {
 }
 
 void drawWardriveTile(int x, int y, const char* label, uint32_t value) {
-  display.fillRoundRect(x, y, 111, 52, 5, kPanel);
+  display.fillRoundRect(scaleX(x), scaleY(y), scaleX(111), scaleY(52), 5, kPanel);
   display.setTextSize(1); display.setTextColor(kMuted, kPanel);
-  display.setCursor(x + 7, y + 6); display.print(label);
+  display.setCursor(scaleX(x + 7), scaleY(y + 6)); display.print(label);
   display.setTextSize(value > 999999 ? 1 : 2); display.setTextColor(ILI9341_WHITE, kPanel);
-  display.setCursor(x + 7, y + 24); display.print(value);
+  display.setCursor(scaleX(x + 7), scaleY(y + 24)); display.print(value);
 }
 
 // The same session information is used by solo, Split, and Fleet dashboards.
@@ -838,37 +838,37 @@ void drawWardriveDashboardBody(const String& context) {
   display.dashboardLine(8, storage == 4 ? "Worker: no local CSV" : wardriveCsvName().c_str(), kMuted);
 #else
   display.setTextSize(1); display.setTextColor(statusColor, kBackground);
-  display.setCursor(6, 49); display.print(wardriveRecordingLabel());
+  display.setCursor(scaleX(6), scaleY(49)); display.print(wardriveRecordingLabel());
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 65); display.print(local);
+  display.setCursor(scaleX(6), scaleY(65)); display.print(local);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 79); display.print(gpsTimezoneLabel());
+  display.setCursor(scaleX(6), scaleY(79)); display.print(gpsTimezoneLabel());
   drawWardriveTile(6, 94, "WI-FI", wardriveNetworks);
   drawWardriveTile(123, 94, "BLE", wardriveBleCount);
   display.setTextSize(1); display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 156);
+  display.setCursor(scaleX(6), scaleY(156));
   display.printf("%s  %.2f km  %lu/min", wardriveElapsedText().c_str(), wardriveStats.distanceM / 1000.0,
                  (unsigned long)wardriveStats.perMinute());
   display.setTextColor(gpsHasFix() ? kGood : kWarn, kBackground);
-  display.setCursor(6, 176);
+  display.setCursor(scaleX(6), scaleY(176));
   display.printf("GPS %s | %d satellites", gpsHasFix() ? "FIX" : "NO FIX", gpsSats());
-  display.setCursor(6, 190);
+  display.setCursor(scaleX(6), scaleY(190));
   const double hdop = gps.hdop.isValid() && gps.hdop.age() < 5000 ? gps.hdop.hdop() : -1;
   if (hdop >= 0) display.printf("HDOP %.1f | fix coverage %u%%", hdop, wardriveStats.fixPercent());
   else display.printf("HDOP -- | fix coverage %u%%", wardriveStats.fixPercent());
-  display.fillRoundRect(6, 207, 228, 52, 4, kPanel);
-  display.setTextColor(statusColor, kPanel); display.setCursor(12, 213);
+  display.fillRoundRect(scaleX(6), scaleY(207), scaleX(228), scaleY(52), 4, kPanel);
+  display.setTextColor(statusColor, kPanel); display.setCursor(scaleX(12), scaleY(213));
   if (storage == 4) display.print("Relay to coordinator");
   else display.printf("SD %lu rows | %lu KB", (unsigned long)wardriveStats.rows, (unsigned long)(wardriveStats.bytes / 1024));
-  display.setTextColor(kMuted, kPanel); display.setCursor(12, 228);
+  display.setTextColor(kMuted, kPanel); display.setCursor(scaleX(12), scaleY(228));
   if (storage == 3) display.print("Write failed - check SD card");
   else if (storage == 0) display.print("No file recording available");
   else if (storage == 4) display.print("Coordinator owns the merged CSV");
   else if (wardriveStats.didFlush) display.printf("Flushed %lu rows | %lus ago", (unsigned long)wardriveStats.flushedRows, (unsigned long)flushAge);
   else display.print("Waiting for first flush");
-  display.setCursor(12, 243);
+  display.setCursor(scaleX(12), scaleY(243));
   display.print(storage == 4 ? "Worker: no local CSV" : clipped(wardriveCsvName(), 35));
-  display.setTextColor(kMuted, kBackground); display.setCursor(6, 266); display.print(clipped(context, 37));
+  display.setTextColor(kMuted, kBackground); display.setCursor(scaleX(6), scaleY(266)); display.print(clipped(context, 37));
 #endif
 }
 

@@ -132,18 +132,18 @@ void drawHiddenReveal() {
     const int y = 48 + i * 22;
     display.setTextColor(hiddenEntries[i].revealed ? kGood : ILI9341_WHITE,
                          kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(hiddenEntries[i].revealed
                       ? clipped(hiddenEntries[i].ssid, 22)
                       : String("(hidden)"));
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("%s ch%-3d", macToString(hiddenEntries[i].bssid).c_str(),
                    static_cast<int>(hiddenEntries[i].channel));
   }
   if (hiddenCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(30, 145);
+    display.setCursor(scaleX(30), scaleY(145));
     display.print("Listening for hidden APs...");
   }
   drawFooter("Back", "Back");

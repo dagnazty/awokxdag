@@ -64,7 +64,7 @@ void drawConfirmBanner() {
   }
   display.setTextSize(1);
   display.setTextColor(kBad, kBackground);
-  display.setCursor(6, 250);
+  display.setCursor(scaleX(6), scaleY(250));
   display.print("Tap again: ");
   display.print(attackConfirmLabel);
 }
@@ -281,20 +281,20 @@ void drawSettings() {
   drawHeader(title, lastSettingsWriteOk ? (settingsEdit >= 0 ? "choose a value, then Save" : "stored on this device") : "SAVE FAILED - changes in RAM only");
   display.setTextSize(1); display.setTextColor(kMuted, kBackground);
   if (settingsResetConfirm) {
-    display.setCursor(8, 54); display.print("Restore device preferences:");
-    display.setCursor(8, 80); display.print("Brightness 100% / screen sleep Never");
-    display.setCursor(8, 96); display.print("GPS baud " + String(AwokPins::kGpsBaud));
-    display.setCursor(8, 112); display.print("Splash Show / active tools Immediate");
-    display.setCursor(8, 128); display.print("Raw NMEA Off");
-    display.setCursor(8, 146); display.print("Keeps saved networks, files,");
-    display.setCursor(8, 160); display.print("and the GPS-selected timezone.");
+    display.setCursor(scaleX(8), scaleY(54)); display.print("Restore device preferences:");
+    display.setCursor(scaleX(8), scaleY(80)); display.print("Brightness 100% / screen sleep Never");
+    display.setCursor(scaleX(8), scaleY(96)); display.print("GPS baud " + String(AwokPins::kGpsBaud));
+    display.setCursor(scaleX(8), scaleY(112)); display.print("Splash Show / active tools Immediate");
+    display.setCursor(scaleX(8), scaleY(128)); display.print("Raw NMEA Off");
+    display.setCursor(scaleX(8), scaleY(146)); display.print("Keeps saved networks, files,");
+    display.setCursor(scaleX(8), scaleY(160)); display.print("and the GPS-selected timezone.");
     drawSmallButton(8, 176, 224, 44, "Restore defaults", kBad);
     drawSmallButton(4, 280, 232, 36, "Cancel", kMuted);
     return;
   }
   if (settingsEdit >= 0) {
-    display.setCursor(8, 52); display.print("Current: " + settingsValueLabel(settingsEdit));
-    display.setCursor(8, 70); display.print("Changes apply only when you Save.");
+    display.setCursor(scaleX(8), scaleY(52)); display.print("Current: " + settingsValueLabel(settingsEdit));
+    display.setCursor(scaleX(8), scaleY(70)); display.print("Changes apply only when you Save.");
     const int count = settingsChoiceCount(settingsEdit);
     for (int i = 0; i < count; ++i) {
       const int x = count > 2 ? 8 + (i % 2) * 116 : 8;
@@ -318,29 +318,29 @@ void drawSettings() {
   } else if (settingsGroup == 2) {
     drawSmallButton(8, 52, 224, 44, "GPS baud: " + settingsValueLabel(2), kAccent);
     display.setTextColor(kAccent, kBackground);
-    display.setCursor(8, 118); display.print("TIMEZONE / DST: AUTOMATIC FROM GPS");
+    display.setCursor(scaleX(8), scaleY(118)); display.print("TIMEZONE / DST: AUTOMATIC FROM GPS");
     display.setTextColor(gpsHasFix() ? kGood : kWarn, kBackground);
-    display.setCursor(8, 138); display.print(gpsReceptionLabel());
+    display.setCursor(scaleX(8), scaleY(138)); display.print(gpsReceptionLabel());
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(8, 158); display.print(gpsTimestamp());
-    display.setCursor(8, 174); display.print(gpsTimezoneLabel());
+    display.setCursor(scaleX(8), scaleY(158)); display.print(gpsTimestamp());
+    display.setCursor(scaleX(8), scaleY(174)); display.print(gpsTimezoneLabel());
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(8, 194); display.print(gpsLocalZone >= 0 ? clipped(String(AwokTime::kZones[gpsLocalZone].name), 37) : "Waiting for GPS location.");
-    display.setCursor(8, 214); display.print("Last known zone survives fix loss.");
+    display.setCursor(scaleX(8), scaleY(194)); display.print(gpsLocalZone >= 0 ? clipped(String(AwokTime::kZones[gpsLocalZone].name), 37) : "Waiting for GPS location.");
+    display.setCursor(scaleX(8), scaleY(214)); display.print("Last known zone survives fix loss.");
   } else if (settingsGroup == 3) {
     drawSmallButton(8, 52, 224, 44, "Active tools: " + settingsValueLabel(4), kAccent);
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(8, 124); display.print("Choose whether active tools need");
-    display.setCursor(8, 140); display.print("a second tap before starting.");
+    display.setCursor(scaleX(8), scaleY(124)); display.print("Choose whether active tools need");
+    display.setCursor(scaleX(8), scaleY(140)); display.print("a second tap before starting.");
   } else {
     drawSmallButton(8, 52, 224, 44, "GPS receiver diagnostics", kAccent);
     drawSmallButton(8, 104, 224, 44, "Raw NMEA: " + settingsValueLabel(5), kAccent);
     drawSmallButton(8, 156, 224, 44, "Screen / input test", kAccent);
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(8, 224); display.print("Raw GPS sentences go to USB Serial.");
+    display.setCursor(scaleX(8), scaleY(224)); display.print("Raw GPS sentences go to USB Serial.");
   }
   display.setTextSize(1); display.setTextColor(lastSettingsWriteOk ? kMuted : kWarn, kBackground);
-  display.setCursor(8, 268); display.print(clipped(settingsNotice, 37));
+  display.setCursor(scaleX(8), scaleY(268)); display.print(clipped(settingsNotice, 37));
   drawSmallButton(4, 280, 112, 36, "Back", kMuted);
   drawSmallButton(124, 280, 112, 36, lastSettingsWriteOk ? "Home" : "Retry save", kAccent);
 }

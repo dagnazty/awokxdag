@@ -1759,13 +1759,13 @@ void drawFleetMenu() {
   display.fillScreen(kBackground);
   drawHeader("FLEET", linkEspNowReady ? "choose a role" : "ESP-NOW unavailable");
   display.setTextSize(1); display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(8, 52); display.print("One coordinator owns the merged CSV.");
-  display.setCursor(8, 66); display.print("Workers share Wi-Fi / BLE scanning.");
+  display.setCursor(scaleX(8), scaleY(52)); display.print("One coordinator owns the merged CSV.");
+  display.setCursor(scaleX(8), scaleY(66)); display.print("Workers share Wi-Fi / BLE scanning.");
   drawSmallButton(8, 100, 224, 44, "Start as coordinator", kAccent);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(8, 152); display.print("Create a fleet and begin wardriving.");
+  display.setCursor(scaleX(8), scaleY(152)); display.print("Create a fleet and begin wardriving.");
   drawSmallButton(8, 184, 224, 44, "Join as worker", kAccent);
-  display.setCursor(8, 236); display.print("Wait for a coordinator to invite you.");
+  display.setCursor(scaleX(8), scaleY(236)); display.print("Wait for a coordinator to invite you.");
   drawSmallButton(4, 280, 112, 36, "Back", kMuted);
   drawSmallButton(124, 280, 112, 36, "Home", kAccent);
 }
@@ -1782,13 +1782,13 @@ void drawFleetStatus() {
   if (joining) {
     display.setTextSize(2);
     display.setTextColor(kWarn, kBackground);
-    display.setCursor(6, 60);
+    display.setCursor(scaleX(6), scaleY(60));
     display.print("LISTENING");
     display.setTextSize(1);
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(6, 96);
+    display.setCursor(scaleX(6), scaleY(96));
     display.print("Waiting for a coordinator invite.");
-    display.setCursor(6, 108);
+    display.setCursor(scaleX(6), scaleY(108));
     display.print("Start a fleet on another chip.");
     drawFooter("Leave", "Home");
     return;
@@ -1799,28 +1799,28 @@ void drawFleetStatus() {
 #else
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 46);
+  display.setCursor(scaleX(6), scaleY(46));
   display.print("Code");
   display.setTextSize(2);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 58);
+  display.setCursor(scaleX(6), scaleY(58));
   char code[8];
   snprintf(code, sizeof(code), "%04u", fleetCode);
   display.print(code);
 
   display.setTextSize(1);
   display.setTextColor(fleetWardriveOn ? kGood : kWarn, kBackground);
-  display.setCursor(120, 52);
+  display.setCursor(scaleX(120), scaleY(52));
   display.print(fleetWardriveOn ? (wardriveStorageState() == 3 ? "SD ERROR" : gpsHasFix() ? "RUNNING" : "NO FIX") : "READY");
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(120, 68);
+  display.setCursor(scaleX(120), scaleY(68));
   display.printf("Nodes: %d", fleetMemberCount);
 
   int y = 92;
   for (int i = 0; i < fleetMemberCount && i < kFleetMaxNodes; ++i) {
     const bool me = (i == fleetMyIndex);
     display.setTextColor(me ? ILI9341_WHITE : kMuted, kBackground);
-    display.setCursor(6, y);
+    display.setCursor(scaleX(6), scaleY(y));
     display.printf("M%d %-5s %02x%02x %lu%s", i, fleetRoleLabel(i),
                    fleetMembers[i].mac[4], fleetMembers[i].mac[5],
                    static_cast<unsigned long>(fleetMembers[i].rows),
@@ -1829,24 +1829,24 @@ void drawFleetStatus() {
   }
 
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, y + 6);
+  display.setCursor(scaleX(6), scaleY(y + 6));
   display.printf("Agg: %lu wifi  %lu ble",
                  static_cast<unsigned long>(wardriveNetworks),
                  static_cast<unsigned long>(wardriveBleCount));
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 186); display.print(gpsTimestamp());
-  display.setCursor(6, 200);
+  display.setCursor(scaleX(6), scaleY(186)); display.print(gpsTimestamp());
+  display.setCursor(scaleX(6), scaleY(200));
   display.printf("%s %.2fkm %lu/min", wardriveElapsedText().c_str(), wardriveStats.distanceM / 1000.0,
                  (unsigned long)wardriveStats.perMinute());
-  display.setCursor(6, 214);
+  display.setCursor(scaleX(6), scaleY(214));
   display.printf("GPS %d sat | fix %u%% | %s", gpsSats(), wardriveStats.fixPercent(), gpsHasFix() ? "OK" : "LOST");
   display.setTextColor(wardriveStorageState() == 3 || wardriveStorageState() == 0 ? kBad : kGood, kBackground);
-  display.setCursor(6, 230); display.print(wardriveRecordingLabel());
-  display.setCursor(6, 244);
+  display.setCursor(scaleX(6), scaleY(230)); display.print(wardriveRecordingLabel());
+  display.setCursor(scaleX(6), scaleY(244));
   if (fleetCoordinator) display.printf("SD %lu rows | flushed %lu", (unsigned long)wardriveStats.rows, (unsigned long)wardriveStats.flushedRows);
   else display.print("Merged CSV lives on coordinator");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 260); display.print(gpsTimezoneLabel());
+  display.setCursor(scaleX(6), scaleY(260)); display.print(gpsTimezoneLabel());
 #endif
 
   if (fleetCoordinator) {
@@ -1878,23 +1878,23 @@ void drawLinkWardrive() {
   if (linkState == kLinkAwaitConfirm) {
     drawHeader("LINK", "confirm this code matches");
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, 60);
+    display.setCursor(scaleX(6), scaleY(60));
     display.print("Both units should show the same");
-    display.setCursor(6, 72);
+    display.setCursor(scaleX(6), scaleY(72));
     display.print("4-digit code. Confirm on each.");
     display.setTextSize(4);
     display.setTextColor(kAccent, kBackground);
     char code[8];
     snprintf(code, sizeof(code), "%04u", linkCode);
-    display.setCursor(64, 110);
+    display.setCursor(scaleX(64), scaleY(110));
     display.print(code);
     display.setTextSize(1);
     display.setTextColor(linkConfirmedLocal ? kGood : kWarn, kBackground);
-    display.setCursor(6, 168);
+    display.setCursor(scaleX(6), scaleY(168));
     display.print(linkConfirmedLocal ? "Confirmed here; waiting for partner."
                                      : "Press Confirm when codes match.");
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, 188);
+    display.setCursor(scaleX(6), scaleY(188));
     display.printf("You are the %s (lower MAC wins).",
                    linkRoleMaster ? "master" : "slave");
     drawSmallButton(4, 280, 112, 36, "Cancel", kMuted);
@@ -1906,18 +1906,18 @@ void drawLinkWardrive() {
     drawHeader("LINK", "searching for a partner");
     display.setTextSize(2);
     display.setTextColor(kWarn, kBackground);
-    display.setCursor(6, 60);
+    display.setCursor(scaleX(6), scaleY(60));
     display.print("PAIRING...");
     display.setTextSize(1);
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(6, 96);
+    display.setCursor(scaleX(6), scaleY(96));
     display.print("Put the other unit into Pair too.");
-    display.setCursor(6, 110);
+    display.setCursor(scaleX(6), scaleY(110));
     display.print("Both broadcast on channel 1.");
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, 134);
+    display.setCursor(scaleX(6), scaleY(134));
     display.print("A 4-digit code appears once they");
-    display.setCursor(6, 146);
+    display.setCursor(scaleX(6), scaleY(146));
     display.print("find each other.");
     drawSmallButton(4, 280, 232, 36, "Cancel pairing", kMuted);
     return;
@@ -1927,21 +1927,21 @@ void drawLinkWardrive() {
     drawHeader("LINK", "paired");
     display.setTextSize(2);
     display.setTextColor(kGood, kBackground);
-    display.setCursor(6, 56);
+    display.setCursor(scaleX(6), scaleY(56));
     display.print("PAIRED");
     display.setTextSize(1);
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(6, 92);
+    display.setCursor(scaleX(6), scaleY(92));
     display.printf("Role: %s", linkRoleMaster ? "master" : "slave");
-    display.setCursor(6, 106);
+    display.setCursor(scaleX(6), scaleY(106));
     display.printf("Session: %lu", static_cast<unsigned long>(linkSessionId));
-    display.setCursor(6, 120);
+    display.setCursor(scaleX(6), scaleY(120));
     display.printf("My set: %d of %d channels", linkAssignedChannelCount(),
                    linkPlanCount());
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, 144);
+    display.setCursor(scaleX(6), scaleY(144));
     display.print("Start launches the split wardrive.");
-    display.setCursor(6, 156);
+    display.setCursor(scaleX(6), scaleY(156));
     display.print("Each unit logs its own WiGLE CSV.");
     drawSmallButton(8, 216, 224, 44, "Start split wardrive", kAccent);
     drawSmallButton(4, 280, 112, 36, "Back", kMuted);
@@ -1952,13 +1952,13 @@ void drawLinkWardrive() {
   // kLinkOff — unpaired Split setup. Pairing remains separate from Fleet.
   drawHeader("SPLIT", linkEspNowReady ? "two boards / separate CSVs" : "ESP-NOW unavailable");
   display.setTextSize(1); display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(8, 52); display.print("Pair two boards to divide Wi-Fi");
-  display.setCursor(8, 66); display.print("channels. Each board uses its GPS.");
+  display.setCursor(scaleX(8), scaleY(52)); display.print("Pair two boards to divide Wi-Fi");
+  display.setCursor(scaleX(8), scaleY(66)); display.print("channels. Each board uses its GPS.");
   drawSmallButton(8, 100, 224, 44, "Pair boards", kAccent);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(8, 152); display.print("Confirm the same code on both units.");
+  display.setCursor(scaleX(8), scaleY(152)); display.print("Confirm the same code on both units.");
   drawSmallButton(8, 184, 224, 44, "Wi-Fi only / unpaired", kAccent);
-  display.setCursor(8, 236); display.print("For Wi-Fi + BLE, choose Solo mode.");
+  display.setCursor(scaleX(8), scaleY(236)); display.print("For Wi-Fi + BLE, choose Solo mode.");
   drawSmallButton(4, 280, 112, 36, "Back", kMuted);
   drawSmallButton(124, 280, 112, 36, "Home", kAccent);
 }

@@ -41,6 +41,7 @@ LINKER_WRAP_FLAGS = (
 
 PROFILES = {
     "dual-c5-touch": (C5_FQBN, "AWOK_DUAL_C5_TOUCH"),
+    "pancake-c5": (C5_FQBN, "PANCAKE_C5"),
     "dual-c5-mini": (C5_FQBN, "AWOK_DUAL_C5_MINI"),
     "dual-esp32-touch-v1": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V1"),
     "dual-esp32-touch-v2": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V2"),

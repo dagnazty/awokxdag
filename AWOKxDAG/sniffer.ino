@@ -147,10 +147,10 @@ void drawClientSniffer() {
   for (int i = 0; i < rows; ++i) {
     const int y = 48 + i * 22;
     display.setTextColor(ILI9341_WHITE, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(macToString(clientEntries[i].mac));
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     String detail;
     if (clientEntries[i].lastSsid.length()) {
       detail = "-> " + clientEntries[i].lastSsid;
@@ -165,7 +165,7 @@ void drawClientSniffer() {
   }
   if (clientCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(40, 145);
+    display.setCursor(scaleX(40), scaleY(145));
     display.print("Listening for clients...");
   }
   drawFooter("Home", "Save");
