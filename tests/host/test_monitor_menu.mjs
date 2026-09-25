@@ -1,4 +1,6 @@
-// Run the firmware's menu control flow with UI/radio mocks. No C++/firmware build.
+// Run the firmware's Monitor menu control flow with UI/radio mocks. No firmware
+// build. Monitor now uses the shared card renderer (drawMenuCard): title + a
+// detail line, 4 per page, running state shown by a green outline.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -19,18 +21,23 @@ function adapt(source){return source
 const tools=['DeauthMonitor','RogueWatch','BleDetect','KarmaWatch','BeaconWatch','AuthFlood','AdvancedWatch','DeauthForensics'];
 const flags=['deauthMonitorActive','rogueWatchActive','bleDetectActive','karmaWatchActive','beaconWatchActive','authFloodActive','advancedWatchActive','deauthForensicsActive'];
 const views=['kDeauthMonitor','kRogueWatch','kBleSpamWatch','kKarmaWatch','kBeaconWatch','kAuthFlood','kAdvancedWatch','kDeauthForensics'];
+const numMain=name=>Number(main.match(new RegExp(`(?:const int|constexpr int) ${name} = (\\d+)`))[1]);
+const FIRST=numMain('kMenuFirstY'),PITCH=numMain('kMenuRowPitch'),CARDH=numMain('kMenuCardHeight');
+const PERPAGE=numMain('kMonitorPerPage'),KGOOD=5;
+const cy=i=>FIRST+i*PITCH+Math.floor(CARDH/2);   // vertical center of card row i
 function harness(){
   const calls=[],cards=[],buttons=[];
   const c=vm.createContext({String,max:Math.max,min:Math.min,monitorCategory:-1,monitorPage:0,
-    kMonitorItemCount:8,kMonitorPerPage:3,kScreenWidth:240,kBackground:0,kMuted:1,kAccent:2,
+    kMonitorItemCount:8,kMonitorPerPage:PERPAGE,kMenuFirstY:FIRST,kMenuRowPitch:PITCH,kMenuCardHeight:CARDH,
+    kScreenWidth:240,kBackground:0,kMuted:1,kAccent:2,kGood:KGOOD,
     View:{kMonitor:'monitor'},drawHeader:(...a)=>calls.push(['header',...a]),
-    drawMonitorCard:(...a)=>cards.push(a),drawSmallButton:(...a)=>buttons.push(a),
+    drawMenuCard:(...a)=>cards.push(a),drawSmallButton:(...a)=>buttons.push(a),
     drawHome:()=>calls.push(['home']),display:{fillScreen(){cards.length=buttons.length=0;}},
     deauthForensicsPageCount:()=>c.forensicsPages,deauthForensicsPage:0,forensicsPages:1,
     clearDeauthForensics:()=>calls.push(['clear']),exportDeauthForensicsToSd:()=>{calls.push(['export']);return true;},
     lastDeauthForensicsCsvOk:false,deauthFrameCount:3,disassocFrameCount:4,deauthEventsSinceDraw:5,haveDeauthHit:true,
     bleDetectTotal:10,bleDetectSpam:4,bleDetectPeakRate:3,bleDetectRate:1,bleDetectAlert:true,bleDetectLastVendor:2});
-  for(const name of ['kMonitorItems','kMonitorDescriptions','kMonitorCategories','kMonitorGroupDescriptions'])
+  for(const name of ['kMonitorItems','kMonitorDescriptions','kMonitorCategories'])
     c[name]=Array.from(main.match(new RegExp(`${name}\\[\\] = \\{([^}]+)\\}`))[1].matchAll(/"([^"]+)"/g),m=>m[1]);
   c.kMonitorGroups=main.match(/kMonitorGroups\[\] = \{([^}]+)\}/)[1].split(',').map(Number);
   for(let i=0;i<tools.length;i++){
@@ -53,7 +60,7 @@ test('groups preserve all eight detectors with descriptions and correct paginati
   for(let group=0;group<3;group++){
     t.c.monitorCategory=group;t.c.monitorPage=0;t.c.drawMonitorMenu();
     assert.equal(t.c.monitorVisibleCount(),expected[group].length);
-    assert.equal(t.c.monitorPageCount(),group===0?2:1);
+    assert.equal(t.c.monitorPageCount(),group===0?2:1);   // WI-FI: 5 tools over 4/page
     assert.deepEqual(expected[group].map((_,i)=>t.c.monitorItemIndex(i)),expected[group]);
     assert.equal(t.c.monitorItemIndex(-1),-1);assert.equal(t.c.monitorItemIndex(expected[group].length),-1);
   }
@@ -62,11 +69,11 @@ test('groups preserve all eight detectors with descriptions and correct paginati
   assert.ok(t.c.kMonitorItems.every(s=>s.length*12<=208));
 });
 test('card centers used by Touch and Mini launch every tool and stop returns to its page',()=>{
-  const expected=[[0,1,3],[4,5],[2],[6,7]];
+  const expected=[[0,1,3,4],[5],[2],[6,7]];
   for(let pageIndex=0;pageIndex<expected.length;pageIndex++)for(let row=0;row<expected[pageIndex].length;row++){
     const t=harness(),index=expected[pageIndex][row],group=pageIndex<2?0:pageIndex-1,page=pageIndex===1?1:0;
-    t.c.openMonitorMenu();t.tap(120,78+group*68);if(page)t.tap(200,298);
-    t.tap(120,78+row*68);assert.deepEqual(t.calls.at(-1),['start',index]);
+    t.c.openMonitorMenu();t.tap(120,cy(group));if(page)t.tap(200,298);
+    t.tap(120,cy(row));assert.deepEqual(t.calls.at(-1),['start',index]);
     t.c.currentView=views[index];t.c.toolTap(30);
     assert.deepEqual(t.calls.find(a=>a[0]==='stop'),['stop',index]);
     assert.equal(t.c.monitorCategory,group);assert.equal(t.c.monitorPage,page);assert.equal(t.c.currentView,'monitor');
@@ -83,18 +90,20 @@ test('remote-launched tools derive their group/page; stopped tools do not tear d
     const t=harness();t.c[flags[index]]=true;t.c.returnToMonitor(index);t.c.returnToMonitor(index);
     assert.equal(t.calls.filter(a=>a[0]==='stop').length,1);
     assert.equal(t.c.monitorCategory,index===2?1:index>=6?2:0);
-    assert.equal(t.c.monitorPage,index===4||index===5?1:0);
+    assert.equal(t.c.monitorPage,index===5?1:0);   // WI-FI's 5th tool (index 5) spills to page 2
   }
   const t=harness();t.c.launchMonitorItem(-1);t.c.returnToMonitor(8);assert.equal(t.calls.length,0);
 });
 test('margins, gaps, blank rows and disabled paging do nothing',()=>{
   const t=harness();t.c.openMonitorMenu();t.calls.length=0;
-  for(const [x,y]of [[7,78],[232,78],[120,108],[120,180],[120,250],[120,279],[240,298]])t.tap(x,y);
+  for(const [x,y]of [[6,cy(0)],[236,cy(0)],[120,FIRST+CARDH+3],[120,cy(3)],[120,270],[240,298]])t.tap(x,y);
   assert.equal(t.calls.length,0);assert.equal(t.c.monitorCategory,-1);
-  t.tap(120,78);t.calls.length=0;t.tap(120,298);assert.equal(t.c.monitorPage,0);assert.equal(t.calls.length,0);
-  t.tap(200,298);assert.equal(t.c.monitorPage,1);t.calls.length=0;t.tap(200,298);t.tap(120,214);
-  assert.equal(t.calls.length,0);t.tap(120,298);assert.equal(t.c.monitorPage,0);
-  t.c.monitorCategory=1;t.c.monitorPage=0;t.calls.length=0;t.tap(120,146);t.tap(120,214);assert.equal(t.calls.length,0);
+  t.tap(120,cy(0));t.calls.length=0;                              // enter WI-FI (2 pages)
+  t.tap(120,298);assert.equal(t.c.monitorPage,0);assert.equal(t.calls.length,0);  // Prev disabled on page 1
+  t.tap(200,298);assert.equal(t.c.monitorPage,1);                 // Next
+  t.calls.length=0;t.tap(200,298);assert.equal(t.c.monitorPage,1);// Next disabled on last page
+  t.tap(120,cy(1));assert.equal(t.calls.length,0);                // page 2 has one tool at row 0; row 1 blank
+  t.tap(120,298);assert.equal(t.c.monitorPage,0);                 // Prev returns
 });
 test('Groups returns to picker, Home exits, reopening and stale pages reset safely',()=>{
   const t=harness();t.c.monitorCategory=0;t.c.monitorPage=1;t.tap(40,298);
@@ -104,10 +113,13 @@ test('Groups returns to picker, Home exits, reopening and stale pages reset safe
   t.c.monitorCategory=99;t.c.drawMonitorMenu();assert.equal(t.c.monitorCategory,-1);assert.equal(t.c.monitorPage,0);
   t.c.monitorCategory=1;t.c.openMonitorMenu();assert.equal(t.c.monitorCategory,-1);
 });
-test('running status appears on cards and tool headers; inactive tools offer Start',()=>{
-  const t=harness();t.c.bleDetectActive=true;t.c.openMonitorMenu();assert.match(t.cards[1][2],/1 running/);
-  t.tap(120,146);assert.match(t.cards[0][2],/Running.*view/);assert.equal(t.cards[0][4],true);
-  t.c.bleDetectActive=false;t.c.drawMonitorMenu();assert.match(t.cards[0][2],/Stopped.*start/);
+test('running status shows as a green card + running line; stopped cards show the description',()=>{
+  const t=harness();t.c.bleDetectActive=true;t.c.openMonitorMenu();
+  assert.match(t.cards[1][2],/1 running/);assert.equal(t.cards[1][3],KGOOD);   // BLUETOOTH group card
+  t.tap(120,cy(1));                                            // enter BLUETOOTH
+  assert.match(t.cards[0][2],/Running.*view/);assert.equal(t.cards[0][3],KGOOD);
+  t.c.bleDetectActive=false;t.c.drawMonitorMenu();
+  assert.match(t.cards[0][2],/advert/);assert.notEqual(t.cards[0][3],KGOOD);   // stopped -> description
   t.c.drawMonitorHeader('BLE SPAM WATCH',true,'ALERT: spam flood nearby');
   assert.deepEqual(t.calls.at(-1),['header','BLE SPAM WATCH','Running | ALERT: spam flood nearby']);
   t.c.drawMonitorHeader('BLE SPAM WATCH',false,'listening');assert.match(t.calls.at(-1)[2],/^Stopped/);

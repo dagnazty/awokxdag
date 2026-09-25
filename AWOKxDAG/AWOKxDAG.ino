@@ -806,6 +806,35 @@ void drawFiveButtonFooter(const String& a, const String& b, const String& c,
   drawSmallButton(194, 284, 44, 30, e, kBad);
 }
 
+// Shared card-menu metrics (Network Tools look: 224x44 rounded card + pager),
+// used by Home, Recon, Monitor, Attacks, and the Wi-Fi results screen so they
+// read as one system.
+constexpr int kMenuPerPage = 4;
+constexpr int kMenuFirstY = 58;
+constexpr int kMenuRowPitch = 50;
+constexpr int kMenuRowHeight = 44;
+constexpr int kMenuCardHeight = 44;
+
+// Shared menu card: a bold title over a muted one-line description. `y` is the
+// card's top; `outline` colors the border (kAccent normally, kGood when active,
+// kBad for destructive entries).
+void drawMenuCard(int y, const String& title, const String& detail, uint16_t outline) {
+#ifdef AWOK_MINI_DISPLAY
+  display.button(8, y, 224, kMenuCardHeight, (title + " | " + detail).c_str(),
+                 outline);
+#else
+  display.drawRoundRect(8, y, 224, kMenuCardHeight, 5, outline);
+  display.setTextSize(title.length() <= 17 ? 2 : 1);
+  display.setTextColor(ILI9341_WHITE, kBackground);
+  display.setCursor(16, y + 5);
+  display.print(clipped(title, 34));
+  display.setTextSize(1);
+  display.setTextColor(kMuted, kBackground);
+  display.setCursor(16, y + 29);
+  display.print(clipped(detail, 34));
+#endif
+}
+
 void drawAboutPage() {
   display.fillScreen(kBackground);
   drawHeader("ABOUT", "AxD");
@@ -857,20 +886,26 @@ enum HomeAction {
 };
 struct HomeTile {
   const char* label;
+  const char* detail;
   uint16_t color;
   HomeAction action;
 };
 const HomeTile kHomeTiles[] = {
-    {"Recon", kAccent, kHomeRecon},   {"Attacks", kBad, kHomeAttacks},
-    {"Monitor", kAccent, kHomeMonitor}, {"GPS", kAccent, kHomeGps},
-    {"Files", kAccent, kHomeFiles},   {"Settings", kAccent, kHomeSettings},
-    {"Status", kAccent, kHomeStatus}, {"About", kAccent, kHomeAbout},
+    {"Recon", "Scan Wi-Fi, BLE, RF, LAN", kAccent, kHomeRecon},
+    {"Attacks", "Active RF - authorized use", kBad, kHomeAttacks},
+    {"Monitor", "Detectors & forensics", kAccent, kHomeMonitor},
+    {"GPS", "Fix, wardrive, link modes", kAccent, kHomeGps},
+    {"Files", "Browse & send SD captures", kAccent, kHomeFiles},
+    {"Settings", "Display, GPS, behavior", kAccent, kHomeSettings},
+    {"Status", "Device health & radios", kAccent, kHomeStatus},
+    {"About", "Version & authorized use", kAccent, kHomeAbout},
 };
 const int kHomeTileCount = sizeof(kHomeTiles) / sizeof(kHomeTiles[0]);
-const int kHomeTilesPerPage = 5;
-const int kHomeFirstY = 44;
-const int kHomeRowPitch = 44;
-const int kHomeTileHeight = 40;
+// Card metrics shared with the other menus (see drawMenuCard).
+const int kHomeTilesPerPage = 4;
+const int kHomeFirstY = 58;
+const int kHomeRowPitch = 50;
+const int kHomeTileHeight = kMenuCardHeight;
 
 int homePageCount() {
   return max(1, (kHomeTileCount + kHomeTilesPerPage - 1) / kHomeTilesPerPage);
@@ -914,8 +949,8 @@ void drawHome() {
   const int rows = min(kHomeTilesPerPage, kHomeTileCount - start);
   for (int row = 0; row < rows; ++row) {
     const HomeTile& tile = kHomeTiles[start + row];
-    drawButton(12, kHomeFirstY + row * kHomeRowPitch, 216, kHomeTileHeight,
-               tile.label, tile.color);
+    drawMenuCard(kHomeFirstY + row * kHomeRowPitch, tile.label, tile.detail,
+                 tile.color);
   }
   // Standard paging: Prev on earlier pages, Next while more pages remain. The
   // firmware version fills the slot that has no page to move toward.
@@ -960,7 +995,7 @@ void drawScanning(const String& kind) {
 
 void drawWifiResults() {
   currentView = View::kWifi;
-  const int pages = max(1, (wifiCount + kVisibleRows - 1) / kVisibleRows);
+  const int pages = max(1, (wifiCount + kMenuPerPage - 1) / kMenuPerPage);
   if (wifiPage >= pages) wifiPage = pages - 1;
   if (wifiPage < 0) wifiPage = 0;
   display.fillScreen(kBackground);
@@ -968,31 +1003,23 @@ void drawWifiResults() {
                   String(pages) + " | SD ";
   detail += lastScanSdWriteOk ? "saved" : (sdReady ? "write error" : "missing");
   drawHeader("WI-FI RESULTS", detail);
-  display.setTextSize(1);
-  const int start = wifiPage * kVisibleRows;
-  const int rows = min(kVisibleRows, wifiCount - start);
-#ifdef AWOK_MINI_DISPLAY
-  display.selectableRows(rows);
-#endif
+  const int start = wifiPage * kMenuPerPage;
+  const int rows = min(kMenuPerPage, wifiCount - start);
   for (int row = 0; row < rows; ++row) {
     const int index = start + row;
-    const int y = 48 + row * 22;
-    display.setTextColor(isSaved(wifiEntries[index]) ? kAccent
-                                                     : ILI9341_WHITE,
-                         kBackground);
-    display.setCursor(5, y);
-    display.print(clipped(wifiEntries[index].ssid.length()
-                              ? wifiEntries[index].ssid
-                              : "<hidden>",
-                          20));
-    if (isSaved(wifiEntries[index])) display.print(" *");
-    display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
-    display.printf("%4ld dBm  ch%-3ld %sG  %s",
-                   static_cast<long>(wifiEntries[index].rssi),
-                   static_cast<long>(wifiEntries[index].channel),
-                   bandLabel(wifiEntries[index].channel),
-                   authShortLabel(wifiEntries[index].auth));
+    const bool saved = isSaved(wifiEntries[index]);
+    // Saved networks read as green cards with a * on the SSID.
+    String title = wifiEntries[index].ssid.length() ? wifiEntries[index].ssid
+                                                     : String("<hidden>");
+    if (saved) title += " *";
+    char det[48];
+    snprintf(det, sizeof(det), "%ld dBm  ch%ld  %sG  %s",
+             static_cast<long>(wifiEntries[index].rssi),
+             static_cast<long>(wifiEntries[index].channel),
+             bandLabel(wifiEntries[index].channel),
+             authShortLabel(wifiEntries[index].auth));
+    drawMenuCard(kMenuFirstY + row * kMenuRowPitch, title, det,
+                 saved ? kGood : kAccent);
   }
   if (wifiCount == 0) {
     display.setTextColor(kMuted, kBackground);
@@ -1629,29 +1656,48 @@ void updateWifiSignalMonitor() {
   drawWifiSignalMonitor();
 }
 
-// Keep each Recon category small enough to scan on Touch and Mini. Network
-// Tools already has its own menu, so it opens directly from the picker.
+// Recon groups and tools render as Network-Tools-style cards (a title plus a
+// one-line description). Network Tools has its own menu, so it opens directly
+// from the picker.
 const char* const kReconCategories[] = {
     "Wi-Fi", "Bluetooth", "RF & Packets", "Field Tools", "Network Tools"};
+const char* const kReconCategoryDetails[] = {
+    "Scan, audit, WPS, hidden, HE",
+    "BLE scan, trackers, intel",
+    "Channels, spectrum, capture",
+    "Clients, cameras, harvest, RDF",
+    "LAN hosts, ports, services"};
 constexpr int kReconCategoryCount =
     static_cast<int>(sizeof(kReconCategories) / sizeof(kReconCategories[0]));
+static_assert(sizeof(kReconCategoryDetails) / sizeof(kReconCategoryDetails[0]) ==
+                  kReconCategoryCount,
+              "Recon category details must cover every group");
 struct ReconMenuItem {
   const char* label;
+  const char* detail;
   int category;
 };
 const ReconMenuItem kReconItems[] = {
-    {"Wi-Fi Scan", 0}, {"Saved", 0}, {"WPS Scan", 0},
-    {"Hidden SSID", 0}, {"Security Audit", 0}, {"Wi-Fi 6 Intel", 0},
-    {"BLE Scan", 1}, {"BLE Trackers", 1}, {"BLE Intel", 1},
-    {"Channel Map", 2}, {"Spectrogram", 2}, {"Packet Mon", 2},
-    {"Clients", 3}, {"Cameras", 3}, {"Harvester", 3},
-    {"Probe Intel", 3}, {"Fleet Hunter", 3}, {"Topology Map", 3}};
+    {"Wi-Fi Scan", "Discover 2.4/5 GHz access points", 0},
+    {"Saved", "Networks kept across reboots", 0},
+    {"WPS Scan", "APs advertising WPS setup", 0},
+    {"Hidden SSID", "Reveal hidden network names", 0},
+    {"Security Audit", "Rank AP encryption posture", 0},
+    {"Wi-Fi 6 Intel", "802.11ax HE capability decode", 0},
+    {"BLE Scan", "Discover BLE advertisers", 1},
+    {"BLE Trackers", "Flag AirTags / Tile / SmartTag", 1},
+    {"BLE Intel", "Decode vendor BLE payloads", 1},
+    {"Channel Map", "2.4/5 GHz channel occupancy", 2},
+    {"Spectrogram", "RF waterfall & duty cycle", 2},
+    {"Packet Mon", "Promiscuous pcap capture", 2},
+    {"Clients", "Probe-request station sniffer", 3},
+    {"Cameras", "Flag surveillance cameras", 3},
+    {"Harvester", "Passive EAPOL / PMKID grab", 3},
+    {"Probe Intel", "Preferred-network probe leaks", 3},
+    {"Fleet Hunter", "Multi-node RDF trilateration", 3},
+    {"Topology Map", "Client / AP association graph", 3}};
 constexpr int kReconItemCount =
     static_cast<int>(sizeof(kReconItems) / sizeof(kReconItems[0]));
-constexpr int kMenuPerPage = 6;
-constexpr int kMenuFirstY = 50;
-constexpr int kMenuRowPitch = 32;
-constexpr int kMenuRowHeight = 30;
 
 int reconVisibleItemCount() {
   if (reconCategory < 0) return kReconCategoryCount;
@@ -1679,6 +1725,16 @@ String reconItemLabel(int index) {
     return "Saved (" + String(savedCount) + ")";
   }
   return String(kReconItems[index].label);
+}
+
+String reconItemDetail(int index) {
+  if (index < 0 || index >= kReconItemCount) return "";
+  return String(kReconItems[index].detail);
+}
+
+// One Recon menu card: a bold title over a muted description (shared renderer).
+void drawReconCard(int row, const String& title, const String& detail) {
+  drawMenuCard(kMenuFirstY + row * kMenuRowPitch, title, detail, kAccent);
 }
 
 void launchReconItem(int index) {
@@ -1736,25 +1792,28 @@ void drawReconMenu() {
   const int pages = reconPageCount();
   if (reconPage < 0 || reconPage >= pages) reconPage = 0;
   display.fillScreen(kBackground);
-  const String title = reconCategory < 0 ? "RECON" : kReconCategories[reconCategory];
-  const String detail = reconCategory < 0 ? "choose a tool group" : "Recon / " + title;
-  drawHeader(title, pages > 1 ? detail + " " + String(reconPage + 1) +
-                                      "/" + String(pages) : detail);
+  const bool picker = reconCategory < 0;
+  const String title = picker ? "RECON" : kReconCategories[reconCategory];
+  String detail = picker ? "choose a tool group" : "Recon / " + title;
+  if (pages > 1) detail += " " + String(reconPage + 1) + "/" + String(pages);
+  drawHeader(title, detail);
   const int start = reconPage * kMenuPerPage;
   for (int row = 0; row < kMenuPerPage; ++row) {
     const int position = start + row;
     if (position >= reconVisibleItemCount()) break;
-    const String label = reconCategory < 0 ? String(kReconCategories[position])
-                                          : reconItemLabel(reconItemIndex(position));
-    drawButton(12, kMenuFirstY + row * kMenuRowPitch, 216, kMenuRowHeight, label);
+    if (picker) {
+      drawReconCard(row, kReconCategories[position],
+                    kReconCategoryDetails[position]);
+    } else {
+      const int index = reconItemIndex(position);
+      drawReconCard(row, reconItemLabel(index), reconItemDetail(index));
+    }
   }
-  if (pages > 1) {
-    drawThreeButtonFooter("Back", "Prev", "Next");
-  } else if (reconCategory < 0) {
-    drawFooter("Home", "Home");
-  } else {
-    drawFooter("< Groups", "Home");
-  }
+  // Footer matches Network Tools: Back (Home from the picker, Groups from a
+  // tool list), then Prev/Next only while more pages remain.
+  drawSmallButton(4, 280, 72, 36, picker ? "Home" : "Groups", kMuted);
+  if (reconPage > 0) drawSmallButton(84, 280, 72, 36, "Prev", kAccent);
+  if (reconPage + 1 < pages) drawSmallButton(164, 280, 72, 36, "Next", kAccent);
 }
 
 // Stable tool indices; grouping changes navigation only, not commands or View IDs.
@@ -1768,10 +1827,8 @@ const char* const kMonitorDescriptions[] = {
     "Combined Wi-Fi / BLE anomalies", "Inspect disconnect-frame evidence"};
 const uint8_t kMonitorGroups[] = {0, 0, 1, 0, 0, 0, 2, 2};
 const char* const kMonitorCategories[] = {"WI-FI", "BLUETOOTH", "ADVANCED"};
-const char* const kMonitorGroupDescriptions[] = {
-    "AP identity and Wi-Fi floods", "Bluetooth advertisement floods", "Combined detection and evidence"};
 constexpr int kMonitorItemCount = sizeof(kMonitorItems) / sizeof(kMonitorItems[0]);
-constexpr int kMonitorPerPage = 3;
+constexpr int kMonitorPerPage = 4;
 static_assert(sizeof(kMonitorGroups) / sizeof(kMonitorGroups[0]) == kMonitorItemCount, "Monitor groups must cover every tool");
 static_assert(sizeof(kMonitorDescriptions) / sizeof(kMonitorDescriptions[0]) == kMonitorItemCount, "Monitor descriptions must cover every tool");
 
@@ -1852,21 +1909,6 @@ void drawMonitorHeader(const String& title, bool running, const String& detail) 
   drawHeader(title, String(running ? "Running | " : "Stopped | ") + detail);
 }
 
-void drawMonitorCard(int row, const String& title, const String& state, const String& description, bool running) {
-  const int y = 48 + row * 68;
-#ifdef AWOK_MINI_DISPLAY
-  display.button(8, y, 224, 60, (title + " | " + state + " | " + description).c_str(), running ? kGood : kAccent);
-#else
-  display.drawRoundRect(8, y, 224, 60, 5, running ? kGood : kAccent);
-  display.setTextSize(2); display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(16, y + 6); display.print(title);
-  display.setTextSize(1); display.setTextColor(running ? kGood : kMuted, kBackground);
-  display.setCursor(16, y + 28); display.print(state);
-  display.setTextColor(kMuted, kBackground);
-  display.setCursor(16, y + 44); display.print(description);
-#endif
-}
-
 void openMonitorMenu() { monitorCategory = -1; monitorPage = 0; drawMonitorMenu(); }
 
 void drawMonitorMenu() {
@@ -1880,18 +1922,22 @@ void drawMonitorMenu() {
   for (int row = 0; row < kMonitorPerPage; ++row) {
     const int position = monitorPage * kMonitorPerPage + row;
     if (position >= monitorVisibleCount()) break;
+    const int y = kMenuFirstY + row * kMenuRowPitch;
     if (monitorCategory < 0) {
       int count = 0, active = 0;
       for (int i = 0; i < kMonitorItemCount; ++i) if (kMonitorGroups[i] == position) {
         ++count; if (monitorItemRunning(i)) ++active;
       }
-      drawMonitorCard(row, kMonitorCategories[position], String(count) + (count == 1 ? " tool | " : " tools | ") + String(active) + " running",
-                      kMonitorGroupDescriptions[position], active > 0);
+      // Running state rides the card outline (green) plus the count line.
+      drawMenuCard(y, kMonitorCategories[position],
+                   String(count) + (count == 1 ? " tool, " : " tools, ") + String(active) + " running",
+                   active > 0 ? kGood : kAccent);
     } else {
       const int index = monitorItemIndex(position);
       const bool running = monitorItemRunning(index);
-      drawMonitorCard(row, kMonitorItems[index], running ? "Running | tap to view" : "Stopped | tap to start",
-                      kMonitorDescriptions[index], running);
+      drawMenuCard(y, kMonitorItems[index],
+                   running ? "Running - tap to view" : String(kMonitorDescriptions[index]),
+                   running ? kGood : kAccent);
     }
   }
   if (monitorCategory < 0) drawSmallButton(4, 280, 232, 36, "Home", kMuted);
@@ -1907,7 +1953,7 @@ void drawMonitorMenu() {
 
 void handleMonitorTouch(int x, int y) {
   for (int row = 0; row < kMonitorPerPage; ++row) {
-    if (!gpsMenuHit(x, y, 8, 48 + row * 68, 224, 60)) continue;
+    if (!gpsMenuHit(x, y, 8, kMenuFirstY + row * kMenuRowPitch, 224, kMenuCardHeight)) continue;
     const int position = monitorPage * kMonitorPerPage + row;
     if (position >= monitorVisibleCount()) return;
     if (monitorCategory < 0) { monitorCategory = position; monitorPage = 0; drawMonitorMenu(); }
@@ -1926,22 +1972,26 @@ void handleMonitorTouch(int x, int y) {
   }
 }
 
+// Attack tools as danger-red cards, matching the shared menu look. The four
+// entries fit one page, so the footer is a single Home button.
+const char* const kAttackLabels[] = {"Beacon Flood", "Evil Portal", "Evil Twin",
+                                     "Probe Lure"};
+const char* const kAttackDetails[] = {
+    "Flood fake AP beacons", "Captive-portal credential grab",
+    "Clone the last-scanned AP", "Answer probes to lure clients"};
+constexpr int kAttackCount =
+    static_cast<int>(sizeof(kAttackLabels) / sizeof(kAttackLabels[0]));
+
 void drawAttacksMenu() {
   currentView = View::kAttacks;
   display.fillScreen(kBackground);
   drawHeader("ATTACK TOOLS", "active RF | authorized use only");
-  drawButton(12, 44, 216, 38, "Beacon Flood");
-  drawButton(12, 86, 216, 38, "Evil Portal");
-  drawButton(12, 128, 216, 38, "Evil Twin");
-  drawButton(12, 170, 216, 38, "Probe Lure");
-  display.setTextSize(1);
-  display.setTextColor(kMuted, kBackground);
-  display.setCursor(18, 216);
-  display.print("Evil Twin/Probe Lure use the last-");
-  display.setCursor(18, 228);
-  display.print("scanned SSID. Deauth: under an AP.");
+  for (int row = 0; row < kAttackCount; ++row) {
+    drawMenuCard(kMenuFirstY + row * kMenuRowPitch, kAttackLabels[row],
+                 kAttackDetails[row], kBad);
+  }
   drawConfirmBanner();
-  drawFooter("Home", "Home");
+  drawSmallButton(4, 280, 232, 36, "Home", kMuted);
 }
 
 void sortWifi() {

@@ -64,7 +64,7 @@ void drawConfirmBanner() {
   }
   display.setTextSize(1);
   display.setTextColor(kBad, kBackground);
-  display.setCursor(6, 250);
+  display.setCursor(6, 258);
   display.print("Tap again: ");
   display.print(attackConfirmLabel);
 }

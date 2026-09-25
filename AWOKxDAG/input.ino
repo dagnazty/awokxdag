@@ -180,27 +180,33 @@ void handleTouch() {
       }
       return;
     }
+    // Footer: Back (x<80), Prev (x<160), Next (x>=160), matching drawReconMenu.
     const int pages = reconPageCount();
-    if ((pages <= 1 && x >= 120) || reconCategory < 0) {
-      drawHome();
-    } else if (pages <= 1 || x < 80) {
-      reconCategory = -1;
-      reconPage = 0;
-      drawReconMenu();
+    if (x < 80) {
+      if (reconCategory < 0) {
+        drawHome();
+      } else {
+        reconCategory = -1;
+        reconPage = 0;
+        drawReconMenu();
+      }
     } else if (x < 160) {
-      reconPage = (reconPage - 1 + pages) % pages;
-      drawReconMenu();
-    } else {
-      reconPage = (reconPage + 1) % pages;
+      if (reconPage > 0) {
+        --reconPage;
+        drawReconMenu();
+      }
+    } else if (reconPage + 1 < pages) {
+      ++reconPage;
       drawReconMenu();
     }
     return;
   }
   if (currentView == View::kMonitor) { handleMonitorTouch(x, y); return; }
-  if (currentView == View::kWifi && y >= 44 && y < 264) {
-    const int row = (y - 44) / 22;
-    const int index = wifiPage * kVisibleRows + row;
-    if (row < kVisibleRows && index < wifiCount) {
+  if (currentView == View::kWifi && y >= kMenuFirstY && y < kFooterTop) {
+    const int row = (y - kMenuFirstY) / kMenuRowPitch;
+    const int within = (y - kMenuFirstY) - row * kMenuRowPitch;
+    const int index = wifiPage * kMenuPerPage + row;
+    if (row < kMenuPerPage && within < kMenuCardHeight && index < wifiCount) {
       openWifiAudit(wifiEntries[index], View::kWifi);
     }
     return;
@@ -226,14 +232,15 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kAttacks && y < kFooterTop) {
-    if (y >= 44 && y < 82) {
-      startBeaconFlood();
-    } else if (y >= 86 && y < 124) {
-      startEvilPortalPlain();
-    } else if (y >= 128 && y < 166) {
-      startEvilTwin();
-    } else if (y >= 170 && y < 208) {
-      startProbeLure();
+    for (int row = 0; row < kAttackCount; ++row) {
+      const int by = kMenuFirstY + row * kMenuRowPitch;
+      if (y >= by && y < by + kMenuCardHeight) {
+        if (row == 0) startBeaconFlood();
+        else if (row == 1) startEvilPortalPlain();
+        else if (row == 2) startEvilTwin();
+        else startProbeLure();
+        return;
+      }
     }
     return;
   }
@@ -616,7 +623,7 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kWifi) {
-    const int pages = max(1, (wifiCount + kVisibleRows - 1) / kVisibleRows);
+    const int pages = max(1, (wifiCount + kMenuPerPage - 1) / kMenuPerPage);
     if (pages > 1) {
       if (x < 48) {
         drawHome();

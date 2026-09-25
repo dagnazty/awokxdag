@@ -5,6 +5,27 @@ All notable changes to AxD are documented here. This project follows
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-09-24
+
+### Changed
+
+- Home is now a paginated single-column tile list: page 1 Recon / Attacks /
+  Monitor / GPS / Files, page 2 Settings / Status / About, with Prev/Next paging
+  and the firmware version shown in the unused footer slot. **Files** and
+  **Settings** open directly from Home instead of only through the device-health
+  Status screen. Back from the Files list and from the Settings root now returns
+  to Home. About and the memory/radio error screens share one "any tap returns to
+  the tiles" gesture.
+- Navigation labels standardized to plain **Back** / **Prev** / **Next** (the
+  decorated `< Back`, `< Prev`, `Next >`, `About >` variants were removed) across
+  Home, Recon, Deauth Forensics, and Wi-Fi 6 Intel; Home and Stop are unchanged.
+- Unified menu styling: Home, the Recon groups/tools (Wi-Fi, Bluetooth, RF &
+  Packets, Field Tools), the Attacks menu, and the Monitor menu now render as the
+  same Network-Tools-style cards (bold title + one-line description, 4 per page,
+  `Back / Prev / Next` pager) via a shared `drawMenuCard`. Monitor cards keep
+  their running state as a green outline; Attacks cards are danger-red. Tool
+  routing, view IDs, and pagination are unchanged.
+
 ## [1.7.3] - 2026-09-24
 
 ### Changed
@@ -1047,7 +1068,8 @@ All notable changes to AxD are documented here. This project follows
 - Touchscreen UI, SD capture manager, status screens, serial controls, build
   workflow, and recovery documentation.
 
-[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.3...HEAD
+[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.4...HEAD
+[1.7.4]: https://github.com/dagnazty/awokxdag/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/dagnazty/awokxdag/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/dagnazty/awokxdag/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/dagnazty/awokxdag/compare/v1.7.0...v1.7.1

@@ -88,3 +88,5 @@ jobs:
         run: node --test tests/host/test_network_menu.mjs
       - name: Home navigation and shared paging/labels (mocked UI, no firmware build)
         run: node --test tests/host/test_home_menu.mjs
+      - name: Recon card menu navigation and paging (mocked UI, no firmware build)
+        run: node --test tests/host/test_recon_menu.mjs

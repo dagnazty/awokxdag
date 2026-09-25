@@ -1,6 +1,6 @@
 // Run the firmware's Home navigation control flow with UI mocks. No firmware
-// build. Covers the paginated tiles, direct Files/Settings access, the About
-// overlay, and standardized paging labels/hitboxes (plan phase 6).
+// build. Home now renders as Network-Tools-style cards (title + description, 4
+// per page) with version/Prev/Next paging and the About/error overlay.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -13,8 +13,6 @@ function block(source,start){
   return source.slice(start,end);
 }
 function fn(source,name){return block(source,source.search(new RegExp(`(?:void|bool|int) ${name}\\(`)));}
-// Keep the #else branch of Mini blocks and drop Mini-only code so the host runs
-// the Touch (ILI9341) path, exactly like the shipped non-Mini build.
 function stripMini(s){
   return s.replace(/#ifdef AWOK_MINI_DISPLAY[\s\S]*?#else\n/g,'')
           .replace(/#ifdef AWOK_MINI_DISPLAY[\s\S]*?#endif\n/g,'')
@@ -29,13 +27,15 @@ function adapt(s){return stripMini(s)
 
 // Tie the test to the real tile table and paging constants in the source.
 const tableBody=main.slice(main.indexOf('const HomeTile kHomeTiles[]'));
-const tiles=[...tableBody.slice(0,tableBody.indexOf('};')).matchAll(/\{"([^"]+)",\s*(\w+),\s*(\w+)\}/g)]
-  .map(m=>({label:m[1],color:m[2],action:m[3]}));
+const tiles=[...tableBody.slice(0,tableBody.indexOf('};')).matchAll(/\{"([^"]+)",\s*"([^"]+)",\s*(\w+),\s*(\w+)\}/g)]
+  .map(m=>({label:m[1],detail:m[2],color:m[3],action:m[4]}));
 const actionNames=[...main.match(/enum HomeAction\s*\{([^}]+)\}/)[1].matchAll(/(\w+)/g)].map(m=>m[1]);
-const num=name=>{const m=main.match(new RegExp(`const int ${name} = (\\d+);`));return m?Number(m[1]):null;};
+const num=name=>{const m=main.match(new RegExp(`(?:const int|constexpr int) ${name} = (\\d+);`));return m?Number(m[1]):null;};
+const cardH=num('kMenuCardHeight');
+const rowY=r=>num('kHomeFirstY')+r*num('kHomeRowPitch')+Math.floor(cardH/2);
 
 function harness(){
-  const calls=[],buttons=[],footers=[];let header=[];
+  const cards=[],footers=[],calls=[];let header=[];
   const targets={drawReconMenu:'kRecon',drawAttacksMenu:'kAttacks',openMonitorMenu:'kMonitor',
     drawGps:'kGps',openFilesManager:'kFiles',openSettings:'kSettings',drawStatus:'kStatus'};
   const c=vm.createContext({String,max:Math.max,min:Math.min,
@@ -43,64 +43,64 @@ function harness(){
     currentView:'kHome',View:{kHome:'kHome',kScreenTest:'kScreenTest'},
     kScreenWidth:240,kFooterTop:278,
     kHomeTilesPerPage:num('kHomeTilesPerPage'),kHomeFirstY:num('kHomeFirstY'),
-    kHomeRowPitch:num('kHomeRowPitch'),kHomeTileHeight:num('kHomeTileHeight'),
-    kHomeTileCount:tiles.length,kHomeTiles:tiles,kVersion:'1.7.3',
+    kHomeRowPitch:num('kHomeRowPitch'),kHomeTileHeight:cardH,
+    kHomeTileCount:tiles.length,kHomeTiles:tiles,kVersion:'1.7.4',
     kBackground:0,kMuted:1,kAccent:2,kBad:3,
     kHomeRecon:'kHomeRecon',kHomeAttacks:'kHomeAttacks',kHomeMonitor:'kHomeMonitor',
     kHomeGps:'kHomeGps',kHomeFiles:'kHomeFiles',kHomeSettings:'kHomeSettings',
     kHomeStatus:'kHomeStatus',kHomeAbout:'kHomeAbout',
     finishScreenTest(){},networkToolsOpen:()=>false,closeNetworkTools(){},
     signalMonitorActive:false,
-    drawHeader:(...a)=>{header=a;},drawButton:(...a)=>buttons.push(a),
+    drawHeader:(...a)=>{header=a;},drawMenuCard:(...a)=>cards.push(a),
     drawFooter:(l,r)=>footers.push([l,r]),
     drawAboutPage(){calls.push(['about']);},
-    display:{fillScreen(){buttons.length=footers.length=0;header=[];}}});
+    display:{fillScreen(){cards.length=footers.length=0;header=[];}}});
   for(const [name,view] of Object.entries(targets))
     c[name]=()=>{calls.push([name]);c.currentView=view;};
   assert.deepEqual(actionNames,['kHomeRecon','kHomeAttacks','kHomeMonitor','kHomeGps',
     'kHomeFiles','kHomeSettings','kHomeStatus','kHomeAbout']);
-  const names=['homePageCount','launchHomeTile','openAbout','drawHome'];
-  vm.runInContext(adapt(names.map(n=>fn(main,n)).join('\n')),c);
+  const fns=['homePageCount','launchHomeTile','openAbout','drawHome'];
+  vm.runInContext(adapt(fns.map(n=>fn(main,n)).join('\n')),c);
   const home=block(input,input.indexOf('if (currentView == View::kHome)'));
   vm.runInContext(adapt('function homeTap(x, y) {\n'+home+'\n}'),c);
-  return {c,calls,buttons,footers,header:()=>header,
+  return {c,cards,footers,calls,header:()=>header,
     tap:(x,y)=>{c.currentView='kHome';c.homeTap(x,y);},
-    labels:()=>buttons.map(b=>b[4])};
+    labels:()=>cards.map(cd=>cd[1])};
 }
 
-test('page 1 shows the first five destinations with a version/Next footer and page badge',()=>{
+test('page 1 shows the first four destinations as cards with a version/Next footer',()=>{
   const t=harness();t.c.drawHome();
-  assert.deepEqual(t.labels(),['Recon','Attacks','Monitor','GPS','Files']);
+  assert.deepEqual(t.labels(),['Recon','Attacks','Monitor','GPS']);
+  assert.equal(t.cards[0][2],tiles[0].detail);         // description carried onto the card
   assert.equal(t.c.homePageCount(),2);assert.match(t.header()[1],/1\/2/);
-  assert.deepEqual(t.footers.at(-1),['1.7.3','Next']);
+  assert.deepEqual(t.footers.at(-1),['1.7.4','Next']);
   t.c.sdReady=false;t.c.drawHome();assert.match(t.header()[1],/SD missing/);
 });
-test('page 2 exposes Settings, Status and About with a Prev/version footer',()=>{
+test('page 2 exposes Files, Settings, Status and About with a Prev/version footer',()=>{
   const t=harness();t.c.homePage=1;t.c.drawHome();
-  assert.deepEqual(t.labels(),['Settings','Status','About']);
-  assert.match(t.header()[1],/2\/2/);assert.deepEqual(t.footers.at(-1),['Prev','1.7.3']);
+  assert.deepEqual(t.labels(),['Files','Settings','Status','About']);
+  assert.match(t.header()[1],/2\/2/);assert.deepEqual(t.footers.at(-1),['Prev','1.7.4']);
 });
 test('Files and Settings are reachable directly without the Status screen',()=>{
-  const t=harness();t.c.drawHome();
-  t.tap(120,220);assert.equal(t.calls.at(-1)[0],'openFilesManager');   // Files, page 1
-  t.c.homePage=1;t.c.drawHome();
-  t.tap(120,44);assert.equal(t.calls.at(-1)[0],'openSettings');         // Settings, page 2
+  const t=harness();t.c.homePage=1;t.c.drawHome();
+  t.tap(120,rowY(0));assert.equal(t.calls.at(-1)[0],'openFilesManager');  // Files, page 2 row 0
+  t.c.drawHome();t.tap(120,rowY(1));assert.equal(t.calls.at(-1)[0],'openSettings');
 });
-test('every destination and the recon reset route from its tile',()=>{
-  const expected=['drawReconMenu','drawAttacksMenu','openMonitorMenu','drawGps','openFilesManager'];
-  for(let row=0;row<5;row++){
-    const t=harness();t.c.drawHome();t.tap(120,44+row*44);
-    assert.equal(t.calls.at(-1)[0],expected[row]);
+test('every destination and the recon reset route from its card',()=>{
+  const page1=['drawReconMenu','drawAttacksMenu','openMonitorMenu','drawGps'];
+  for(let row=0;row<4;row++){
+    const t=harness();t.c.drawHome();t.tap(120,rowY(row));
+    assert.equal(t.calls.at(-1)[0],page1[row]);
   }
-  const t=harness();t.c.drawHome();t.tap(120,44);
+  const t=harness();t.c.drawHome();t.tap(120,rowY(0));
   assert.equal(t.c.reconCategory,-1);assert.equal(t.c.reconPage,0);   // recon resets to picker
-  t.c.homePage=1;t.c.drawHome();t.tap(120,88);assert.equal(t.calls.at(-1)[0],'drawStatus');
+  t.c.homePage=1;t.c.drawHome();t.tap(120,rowY(2));assert.equal(t.calls.at(-1)[0],'drawStatus');
 });
 test('About opens an overlay that any tap dismisses back to page 1',()=>{
   const t=harness();t.c.homePage=1;t.c.drawHome();
-  t.tap(120,132);assert.equal(t.c.homeOverlay,true);assert.equal(t.calls.at(-1)[0],'about');
+  t.tap(120,rowY(3));assert.equal(t.c.homeOverlay,true);assert.equal(t.calls.at(-1)[0],'about');
   t.tap(5,5);assert.equal(t.c.homeOverlay,false);assert.equal(t.c.homePage,0);
-  assert.deepEqual(t.labels(),['Recon','Attacks','Monitor','GPS','Files']);
+  assert.deepEqual(t.labels(),['Recon','Attacks','Monitor','GPS']);
 });
 test('paging is bounded and the version slots are inert',()=>{
   const t=harness();t.c.drawHome();
@@ -109,8 +109,10 @@ test('paging is bounded and the version slots are inert',()=>{
   t.tap(200,300);assert.equal(t.c.homePage,1);       // version slot (right) on last page
   t.tap(30,300);assert.equal(t.c.homePage,0);        // Prev returns
 });
-test('gaps between tiles and the dead strip above the footer launch nothing',()=>{
+test('gaps between cards and the dead strip above the footer launch nothing',()=>{
   const t=harness();t.c.drawHome();const before=t.calls.length;
-  for(const y of [43,84,264,270,277])t.tap(120,y);
+  const first=num('kHomeFirstY');
+  for(const y of [first-2, first+cardH+2, first+3*num('kHomeRowPitch')+cardH+2, 277])
+    t.tap(120,y);
   assert.equal(t.calls.length,before);assert.equal(t.c.currentView,'kHome');
 });

@@ -126,7 +126,7 @@ constexpr uint8_t kDeauthHopChannels[] = {
 constexpr int kDeauthHopChannelCount =
     static_cast<int>(sizeof(kDeauthHopChannels) / sizeof(kDeauthHopChannels[0]));
 constexpr int kMaxDeauthTargets = 8;
-constexpr char kVersion[] = "1.7.3";
+constexpr char kVersion[] = "1.7.4";
 constexpr char kAuthor[] = "dag nazty";
 constexpr uint32_t kHandshakeRedrawMs = 500;
 constexpr uint32_t kHandshakePulseMs = 2000;
@@ -350,6 +350,7 @@ constexpr uint32_t kAuthFloodWindowMs = 2000;
 constexpr uint32_t kAuthFloodRedrawMs = 500;
 constexpr uint32_t kAuthFloodHopIntervalMs = 250;
 constexpr uint32_t kAuthFloodThreshold = 30;  // auth/assoc frames / window
+
 
 // Advanced Watch: shared passive Wi-Fi/BLE anomaly detector.
 constexpr char kAdvancedWatchLogCsvPath[] = "/awokxdag/advanced_watch.csv";

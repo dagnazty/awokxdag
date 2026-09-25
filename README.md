@@ -3,7 +3,7 @@
 **Dual-band Wi-Fi / BLE penetration-testing toolkit for the ESP32-C5** (AWOK Dual
 C5, white-USB screen board with an ILI9341 touchscreen).
 
-- **Version:** 1.7.3
+- **Version:** 1.7.4
 - **Author:** dag nazty
 - **Target:** ESP32-C5 Dev Module, 8 MB flash, PSRAM, microSD
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
@@ -312,10 +312,10 @@ page; an already stopped detector shows **Back**. **Groups** returns to the pick
 ## Menu map
 
 ```
-Home  page 1: Recon | Attacks | Monitor | GPS | Files       (footer: version | Next)
-      page 2: Settings | Status | About                    (footer: Prev | version)
+Home  page 1: Recon | Attacks | Monitor | GPS            (footer: version | Next)
+      page 2: Files | Settings | Status | About          (footer: Prev | version)
       About  overlay: name, version, board, authorized-use notice (any tap = back)
-      (Files and Settings open straight from Home; Prev/Next page the tiles)
+      (Card menu with descriptions; Files/Settings open straight from Home)
 
 Recon:        Wi-Fi | Bluetooth | RF & Packets | Field Tools | Network Tools
   Wi-Fi:      Wi-Fi Scan | Saved | WPS Scan | Hidden SSID | Security Audit | Wi-Fi 6 Intel

@@ -24,7 +24,7 @@ esp_err_t __wrap_esp_wifi_init(const wifi_init_config_t *config) {
   wifi_init_config_t cfg = *config;
   // AWOKxDAG only ever scans APs and injects the occasional mgmt frame -- it
   // never sustains a throughput connection -- so trim Arduino's oversized STA
-  // buffer pool and turn off CSI/AMPDU. Under the time-multiplex scheduler
+  // buffer pool and turn off AMPDU. Under the time-multiplex scheduler
   // Wi-Fi no longer has to leave room for a resident BLE controller, so these
   // are moderate (scan-friendly) caps rather than the earlier hard floor.
   if (cfg.dynamic_rx_buf_num > 8) cfg.dynamic_rx_buf_num = 8;
@@ -45,9 +45,9 @@ esp_err_t __wrap_esp_wifi_init(const wifi_init_config_t *config) {
     cfg.cache_tx_buf_num = 4;
   }
   log_internal_heap("wrap before");
-  printf("[wifi] init wrap rx=%d tx=%d static_rx=%d mgmt=%d cache=%d csi=0\n",
+  printf("[wifi] init wrap rx=%d tx=%d static_rx=%d mgmt=%d cache=%d csi=%d\n",
          cfg.dynamic_rx_buf_num, cfg.dynamic_tx_buf_num, cfg.static_rx_buf_num,
-         cfg.mgmt_sbuf_num, cfg.cache_tx_buf_num);
+         cfg.mgmt_sbuf_num, cfg.cache_tx_buf_num, cfg.csi_enable);
   esp_err_t err = __real_esp_wifi_init(&cfg);
   log_internal_heap("wrap after");
   if (err == ESP_OK) return err;
