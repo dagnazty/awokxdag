@@ -5,6 +5,30 @@ All notable changes to AxD are documented here. This project follows
 
 ## [Unreleased]
 
+## [1.7.6] - 2026-09-26
+
+### Changed
+
+- Footer labels no longer duplicate: a menu that showed two "Home" or two "Back"
+  buttons now pairs **Back** + **Home** (About, the memory/radio error screens,
+  Packet Monitor, Probe Lure's no-target screen, and the WPS/Hidden single-page
+  footers), with each button routed to a distinct destination.
+- Mini: card menus now put the selectable **category on its own line (marked with
+  `>`)** and its **description on a separate unmarked line**, so selectable items
+  are clearly distinct from description text.
+
+### Fixed
+
+- Mini (classic v1-v3): removed the **Brightness** and **Screen sleep** settings,
+  which were dead controls — that panel's backlight is hardwired on (GPIO 32
+  controls nothing), confirmed via serial (PWM was driven correctly but never
+  reached the backlight). The Display group now shows only Boot splash with a note,
+  and the sleep logic is disabled so it can't swallow the first button press. The
+  C5 Mini, Touch, and all other boards keep Brightness/Screen sleep unchanged.
+- Backlight PWM now uses explicit LEDC with detach on the on/off endpoints
+  (replacing `analogWrite`), so full-on/off latches correctly after dimming on the
+  boards whose backlight is GPIO-controlled.
+
 ## [1.7.5] - 2026-09-25
 
 ### Changed
@@ -1081,7 +1105,8 @@ All notable changes to AxD are documented here. This project follows
 - Touchscreen UI, SD capture manager, status screens, serial controls, build
   workflow, and recovery documentation.
 
-[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.5...HEAD
+[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.6...HEAD
+[1.7.6]: https://github.com/dagnazty/awokxdag/compare/v1.7.5...v1.7.6
 [1.7.5]: https://github.com/dagnazty/awokxdag/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/dagnazty/awokxdag/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/dagnazty/awokxdag/compare/v1.7.2...v1.7.3

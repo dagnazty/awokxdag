@@ -177,7 +177,13 @@ bool netHostSelectionValid(int index) {
 void netCard(int row, const String& title, const String& detail) {
   const int y = 58 + row * 50;
 #ifdef AWOK_MINI_DISPLAY
-  display.button(8, y, 224, 44, (title + " | " + detail).c_str(), kAccent);
+  display.button(8, y, 224, 44, title.c_str(), kAccent);  // selectable line
+  if (detail.length()) {
+    display.setTextSize(1);
+    display.setTextColor(kMuted, kBackground);
+    display.setCursor(16, y + 22);
+    display.print(detail);
+  }
 #else
   display.drawRoundRect(8, y, 224, 44, 5, kAccent);
   display.setTextSize(title.length() <= 17 ? 2 : 1);

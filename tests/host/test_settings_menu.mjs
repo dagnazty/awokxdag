@@ -40,6 +40,10 @@ function harness() {
     'settingsCurrentChoice','beginSettingsEdit','applySettingsChoice','saveDeviceSettings','loadDeviceSettings',
     'resetDeviceSettings','openSettings','handleSettingsTouch'];
   let adapted=names.map(fn).join('\n')
+    // Drop the classic-Mini-only branches, keeping the default (#else) path.
+    .replace(/#ifdef AWOK_CLASSIC_MINI_WIRING[\s\S]*?#else\n/g,'')
+    .replace(/#ifdef AWOK_CLASSIC_MINI_WIRING[\s\S]*?#endif\n/g,'')
+    .replace(/#endif\n/g,'')
     .replace(/^(?:void|bool|int) (\w+)\(([^)]*)\)/gm,(_,name,args)=>`function ${name}(${args.replace(/unsigned long |uint8_t |bool |int /g,'')})`)
     .replace(/const (?:bool|int) /g,'const ').replace(/\b(?:int|bool) (\w+)\s*=/g,'let $1 =')
     .replace(/static_cast<uint8_t>\(([^)]*)\)/g,'($1 & 255)')

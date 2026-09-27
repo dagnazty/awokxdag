@@ -271,7 +271,8 @@ void handleTouch() {
   if (y < kFooterTop) return;
   if (currentView == View::kPacketMon) {
     stopPacketMon();
-    drawReconMenu();
+    if (x < kScreenWidth / 2) drawReconMenu();  // Back -> Recon
+    else drawHome();                            // Home
     return;
   }
   if (currentView == View::kCameraScan) {
@@ -306,7 +307,9 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kWpsScan) {
-    if (reconResultFooterHit(x, wpsCount, false) == 0) { stopWpsScan(); drawReconMenu(); }
+    const int a = reconResultFooterHit(x, wpsCount, false);
+    if (a == 0) { stopWpsScan(); drawReconMenu(); }
+    else if (a == 4) { stopWpsScan(); drawHome(); }
     else drawWpsScan();
     return;
   }
@@ -316,7 +319,9 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kHiddenReveal) {
-    if (reconResultFooterHit(x, hiddenCount, false) == 0) { stopHiddenReveal(); drawReconMenu(); }
+    const int a = reconResultFooterHit(x, hiddenCount, false);
+    if (a == 0) { stopHiddenReveal(); drawReconMenu(); }
+    else if (a == 4) { stopHiddenReveal(); drawHome(); }
     else drawHiddenReveal();
     return;
   }
@@ -566,6 +571,12 @@ void handleTouch() {
     return;
   }
   if (currentView == View::kProbeLure) {
+    if (lureSsid.length() == 0) {  // no-target screen: Back -> Attacks, Home
+      stopProbeLure();
+      if (x < kScreenWidth / 2) drawAttacksMenu();
+      else drawHome();
+      return;
+    }
     if (x < kScreenWidth / 2) {
       stopProbeLure();
       drawAttacksMenu();

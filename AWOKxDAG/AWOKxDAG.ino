@@ -821,8 +821,16 @@ constexpr int kMenuCardHeight = 44;
 // kBad for destructive entries).
 void drawMenuCard(int y, const String& title, const String& detail, uint16_t outline) {
 #ifdef AWOK_MINI_DISPLAY
-  display.button(8, y, 224, kMenuCardHeight, (title + " | " + detail).c_str(),
-                 outline);
+  // Mini: the category is the only selectable line (gets the ">" marker); the
+  // description is a separate, unmarked muted line beneath it so the two are
+  // clearly distinct.
+  display.button(8, y, 224, kMenuCardHeight, title.c_str(), outline);
+  if (detail.length()) {
+    display.setTextSize(1);
+    display.setTextColor(kMuted, kBackground);
+    display.setCursor(16, y + 22);
+    display.print(detail);
+  }
 #else
   display.drawRoundRect(8, y, 224, kMenuCardHeight, 5, outline);
   display.setTextSize(title.length() <= 17 ? 2 : 1);
@@ -859,12 +867,14 @@ void drawReconResultFooter(const char* back, const char* action, int count) {
     if (action) drawFourButtonFooter(back, "Prev", "Next", action);
     else drawThreeButtonFooter(back, "Prev", "Next");
   } else {
-    drawFooter(back, action ? action : back);
+    // A Back-only screen would otherwise show two identical labels; give the
+    // second slot a Home button instead.
+    drawFooter(back, action ? action : "Home");
   }
 }
 
 // Footer hit-test mirroring drawReconResultFooter. Returns 0=Back, 1=Prev,
-// 2=Next, 3=Action, and advances reconResultPage for Prev/Next.
+// 2=Next, 3=Action, 4=Home, and advances reconResultPage for Prev/Next.
 int reconResultFooterHit(int x, int count, bool hasAction) {
   const int pages = reconResultPages(count);
   if (pages > 1) {
@@ -879,7 +889,8 @@ int reconResultFooterHit(int x, int count, bool hasAction) {
     reconResultPage = (reconResultPage + 1) % pages;
     return 2;
   }
-  return (hasAction && x >= kScreenWidth / 2) ? 3 : 0;
+  if (x < kScreenWidth / 2) return 0;
+  return hasAction ? 3 : 4;  // right slot: Action, or Home on a Back-only screen
 }
 
 void drawAboutPage() {
@@ -922,7 +933,7 @@ void drawAboutPage() {
   display.setTextColor(kMuted, kBackground);
   display.setCursor(6, 218);
   display.print("Tap anywhere to go back.");
-  drawFooter("Back", "Back");
+  drawFooter("Back", "Home");  // both return to the Home tiles (overlay: any tap)
 }
 
 // Home destinations. Files and Settings are first-class entries here so neither
@@ -2089,7 +2100,7 @@ void showToolMemoryError(const char* tool) {
   display.print("Tool could not start.");
   display.setCursor(6, 80);
   display.print("Check Serial Monitor.");
-  drawFooter("Home", "Home");
+  drawFooter("Back", "Home");  // overlay: any tap returns to the Home tiles
 }
 
 void showRadioError(const char* message) {
@@ -2105,7 +2116,7 @@ void showRadioError(const char* message) {
   display.print("Radio initialization failed.");
   display.setCursor(6, 80);
   display.print("Check Serial Monitor for details.");
-  drawFooter("Home", "Home");
+  drawFooter("Back", "Home");  // overlay: any tap returns to the Home tiles
 }
 
 bool ensureWifiStation(bool releaseBle) {

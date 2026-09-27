@@ -79,19 +79,24 @@ void deviceSettingsDefaults(DeviceSettingsRecord& out) {
 
 void writeBacklightPercent(int percent) {
   const int pin = AwokPins::kBacklight;
-  pinMode(pin, OUTPUT);
-  // Full on/off stay on GPIO so LEDC is not attached at boot (it fragments
-  // the large internal heap block Wi-Fi needs).
-  if (percent <= 0) {
-    digitalWrite(pin, AwokPins::kBacklightOn ? LOW : HIGH);
+  if (pin < 0) return;  // headless bridge has no panel backlight
+  // Track whether LEDC currently owns the pin. Full on/off use plain GPIO so
+  // LEDC is not attached at boot (it fragments the large internal heap block
+  // Wi-Fi needs); mid levels drive it with explicit LEDC PWM. analogWrite() was
+  // unreliable here and, once it grabbed the pin, a later digitalWrite() would
+  // not latch -- so brightness appeared dead on the classic Mini. We detach
+  // LEDC before returning the pin to GPIO for the on/off endpoints.
+  static bool ledcOwnsPin = false;
+  if (percent <= 0 || percent >= 100) {
+    if (ledcOwnsPin) { ledcDetach(pin); ledcOwnsPin = false; }
+    pinMode(pin, OUTPUT);
+    const bool lit = percent >= 100;
+    digitalWrite(pin, (lit == AwokPins::kBacklightOn) ? HIGH : LOW);
     return;
   }
-  if (percent >= 100) {
-    digitalWrite(pin, AwokPins::kBacklightOn ? HIGH : LOW);
-    return;
-  }
-  const int duty = constrain(percent, 20, 99) * 255 / 100;
-  analogWrite(pin, AwokPins::kBacklightOn ? duty : (255 - duty));
+  if (!ledcOwnsPin) { ledcOwnsPin = ledcAttach(pin, 5000, 8); }
+  const int duty = constrain(percent, 1, 99) * 255 / 100;
+  ledcWrite(pin, AwokPins::kBacklightOn ? duty : (255 - duty));
 }
 
 void setBacklightLit(bool on) {
@@ -105,11 +110,15 @@ void noteActivity() {
 }
 
 void updateBacklightSleep() {
+#ifdef AWOK_CLASSIC_MINI_WIRING
+  return;  // backlight hardwired on: no dimming, and never eat a wake tap
+#else
   if (currentView == View::kScreenTest) return;
   if (deviceSettings.backlightTimeoutMs == 0 || backlightDimmed) return;
   if (millis() - lastActivityMs >= deviceSettings.backlightTimeoutMs) {
     setBacklightLit(false);
   }
+#endif
 }
 
 bool saveDeviceSettings() {
@@ -312,9 +321,18 @@ void drawSettings() {
       drawSmallButton(8, 46 + (i - 1) * 44, 224, 40, kSettingsGroups[i], kAccent);
     drawSmallButton(8, 222, 224, 40, "Restore defaults...", kWarn);
   } else if (settingsGroup == 1) {
+#ifdef AWOK_CLASSIC_MINI_WIRING
+    // This Mini's backlight is hardwired on (GPIO 32 controls nothing), so
+    // Screen sleep and Brightness are omitted -- they would be dead controls.
+    drawSmallButton(8, 52, 224, 44, "Boot splash: " + settingsValueLabel(3), kAccent);
+    display.setTextColor(kMuted, kBackground);
+    display.setCursor(8, 120); display.print("Backlight is always on for this");
+    display.setCursor(8, 136); display.print("Mini panel (no GPIO control).");
+#else
     drawSmallButton(8, 52, 224, 44, "Screen sleep: " + settingsValueLabel(0), kAccent);
     drawSmallButton(8, 104, 224, 44, "Brightness: " + settingsValueLabel(1), kAccent);
     drawSmallButton(8, 156, 224, 44, "Boot splash: " + settingsValueLabel(3), kAccent);
+#endif
   } else if (settingsGroup == 2) {
     drawSmallButton(8, 52, 224, 44, "GPS baud: " + settingsValueLabel(2), kAccent);
     display.setTextColor(kAccent, kBackground);
@@ -388,9 +406,13 @@ void handleSettingsTouch(int x, int y) {
     return;
   }
   if (settingsGroup == 1) {
+#ifdef AWOK_CLASSIC_MINI_WIRING
+    if (settingsHit(x, y, 8, 52, 224, 44)) beginSettingsEdit(3);  // Boot splash only
+#else
     if (settingsHit(x, y, 8, 52, 224, 44)) beginSettingsEdit(0);
     else if (settingsHit(x, y, 8, 104, 224, 44)) beginSettingsEdit(1);
     else if (settingsHit(x, y, 8, 156, 224, 44)) beginSettingsEdit(3);
+#endif
   } else if (settingsGroup == 2) {
     if (settingsHit(x, y, 8, 52, 224, 44)) beginSettingsEdit(2);
   } else if (settingsGroup == 3) {

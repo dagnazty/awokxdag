@@ -275,9 +275,15 @@ class AwokMiniDisplay : public Adafruit_GFX {
         canvas_->setTextColor(item.action() ? ST7735_WHITE : item.color);
         canvas_->setCursor(8, y); canvas_->print(label);
       }
-      if (focus) {
+      // Persistent left marker so selectable rows are always distinct from
+      // description/info text (not only when focused): ">" = selectable,
+      // brighter when focused; info lines stay unmarked (":" only on focus).
+      if (item.action()) {
+        canvas_->setTextColor(focus ? ST7735_CYAN : ST7735_BLUE);
+        canvas_->setCursor(1, y); canvas_->print(">");
+      } else if (focus) {
         canvas_->setTextColor(ST7735_CYAN);
-        canvas_->setCursor(1, y); canvas_->print(item.action() ? ">" : ":");
+        canvas_->setCursor(1, y); canvas_->print(":");
       }
     }
     if (layout.lineCount > MiniLayout::visible) {
