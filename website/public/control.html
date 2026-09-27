@@ -1405,10 +1405,15 @@ function renderWardriveDashboard() {
   const age = Math.max(0, Math.floor((Date.now() - session.receivedAt) / 1000));
   const stale = age > 20 || (!serialConnected && !connection?.connected);
   const modes = ["Solo", "Split", "Fleet coordinator", "Fleet worker"];
-  const warning = session.storage === 3 ? "SD WRITE FAILED" : session.storage === 0 ? "NO SD RECORDING" : !session.fix ? (session.mode === 2 && session.rows > 0 ? "Recording · local GPS missing" : "Waiting for GPS") : session.rows === 0 && session.storage !== 4 ? "Waiting for sightings" : "Recording";
+  const warning = session.storage === 3 ? "SD WRITE FAILED" : session.storage === 0 ? "NO SD RECORDING"
+    : session.mode === 3 ? "Relaying to coordinator"
+    : session.mode === 2 ? (session.rows > 0 ? "Recording" : !session.fix ? "Waiting for coordinator GPS" : "Scanning")
+    : !session.fix ? "Waiting for GPS"
+    : session.rows === 0 ? "Waiting for sightings" : "Recording";
   put("wd-session-state", stale ? "Telemetry stale" : !session.active ? "Stopped" : warning);
   if ($("wd-session-state")) $("wd-session-state").className = "badge " +
-    (stale || !session.fix || session.storage === 0 || session.storage === 3 ? "badge-warn" : session.active ? "badge-lime" : "");
+    (stale || (session.mode !== 3 && !session.fix) || session.storage === 0 || session.storage === 3
+      ? "badge-warn" : session.active ? "badge-lime" : "");
   put("wd-session-source", `${serialConnected ? "USB Serial" : connection.name + (target === 1 ? " · Screen" : " · Bridge")} · ${modes[session.mode] || "Wardrive"} · ${session.nodes} node(s) · session ${session.id} · updated ${age}s ago`);
   put("wd-session-wifi", session.wifi.toLocaleString());
   put("wd-session-ble", session.ble.toLocaleString());
@@ -1418,7 +1423,8 @@ function renderWardriveDashboard() {
   put("wd-session-elapsed", [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(n=>String(n).padStart(2,"0")).join(":"));
   put("wd-session-clock", session.local + " local" + (stale ? " (last update)" : ""));
   put("wd-session-zone", session.zone);
-  put("wd-session-gps", stale ? "Unknown (stale)" : session.fix ? "Fix acquired" : "No fix");
+  put("wd-session-gps", stale ? "Unknown (stale)" : session.fix ? "Local fix acquired"
+    : session.mode === 3 ? "Coordinator provides location" : "No fix");
   put("wd-session-quality", `${session.sats} satellites · HDOP ${session.hdop < 0 ? "—" : session.hdop.toFixed(1)} · fix ${session.fixPercent}% of session`);
   const storage = ["Unavailable", "Awaiting flush", "Flushed", "Write failed", "Relay to coordinator"][session.storage] || "Unknown";
   put("wd-session-storage", storage + (stale ? " (last update)" : ""));
@@ -3503,7 +3509,7 @@ updateEnabled(); renderConns(); renderStats(); initTopoCanvas();
 async function downloadWardriveCsv(){
   if (!wardriveRows.length){ log("no wardrive rows yet"); return; }
   const header =
-    "WigleWifi-1.6,appRelease=AxD,model=ESP32,release=1.7.6,device=AxD,display=none,board=AxD Bridge,brand=AxD\n" +
+    "WigleWifi-1.6,appRelease=AxD,model=ESP32,release=1.7.7,device=AxD,display=none,board=AxD Bridge,brand=AxD\n" +
     "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type\n";
   const text = header + wardriveRows.join("\n") + "\n";
   const fname = "wardrive-" + Date.now() + ".csv";

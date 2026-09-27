@@ -340,6 +340,48 @@ void drawNetworkEditor() {
   }
 #endif
 }
+#ifdef AWOK_CARDPUTER_V11
+bool cardputerNetworkJobActive() { return netJob != NetJob::None; }
+
+void cancelNetworkEditor() {
+  netKeyTap.commit();
+  netWipe(netEdit);
+  drawNetworkSetup();
+}
+
+void handleCardputerTextInput() {
+  if (currentView != View::kNetworkEdit ||
+      !M5Cardputer.Keyboard.isChange() ||
+      !M5Cardputer.Keyboard.isPressed()) return;
+  const auto& keys = M5Cardputer.Keyboard.keysState();
+  netKeyTap.commit();
+  const bool selectedAction = keys.fn && keys.enter;
+  const int action = selectedAction ? display.editorAction() : 2;
+  if (keys.tab || (selectedAction && action == 0)) {
+    cancelNetworkEditor();
+    return;
+  }
+  if (keys.enter && action == 2) {
+    cardputerSuppressCenter = true;
+    if (netEditPassword) { netWipe(netPassword); netPassword = netEdit; }
+    else { if (netSsid != netEdit) netWipe(netPassword); netSsid = netEdit; }
+    netWipe(netEdit);
+    drawNetworkSetup();
+    return;
+  }
+  if (keys.del || (selectedAction && action == 1)) {
+    if (netEdit.length()) netEdit.remove(netEdit.length() - 1);
+  } else {
+    const size_t limit = netEditPassword ? 63 : 32;
+    for (char c : keys.word) {
+      if (keys.fn && (c == ';' || c == ':' || c == ',' || c == '<' ||
+                      c == '.' || c == '>' || c == '/' || c == '?')) continue;
+      if (c >= 32 && c <= 126 && netEdit.length() < limit) netEdit += c;
+    }
+  }
+  drawNetworkEditor();
+}
+#endif
 void drawNetworkAps() {
   currentView = View::kNetworkAps;
   display.fillScreen(kBackground);

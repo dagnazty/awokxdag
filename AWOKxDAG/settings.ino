@@ -78,6 +78,10 @@ void deviceSettingsDefaults(DeviceSettingsRecord& out) {
 }
 
 void writeBacklightPercent(int percent) {
+#ifdef AWOK_CARDPUTER_V11
+  M5Cardputer.Display.setBrightness(constrain(percent, 0, 100) * 255 / 100);
+  return;
+#endif
   const int pin = AwokPins::kBacklight;
   if (pin < 0) return;  // headless bridge has no panel backlight
   // Track whether LEDC currently owns the pin. Full on/off use plain GPIO so

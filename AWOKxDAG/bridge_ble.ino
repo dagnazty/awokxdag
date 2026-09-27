@@ -274,6 +274,10 @@ void bridgeBleBegin() {
       kBridgeResultsUuid, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
   svc->start();
   NimBLEAdvertising* adv = NimBLEDevice::getAdvertising();
+  // The 128-bit service UUID and full name do not fit together in a 31-byte
+  // legacy advertisement. Keep the UUID in the advertisement and put the name
+  // in the scan response so Web Bluetooth can discover both.
+  adv->enableScanResponse(true);
   adv->addServiceUUID(svc->getUUID());
   adv->setName("AxD-Bridge");
   adv->start();

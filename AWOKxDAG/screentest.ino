@@ -325,11 +325,11 @@ void updateScreenTest() {
 #ifdef AWOK_MINI_DISPLAY
   if (screenTestStep == kScreenTestInput) {
     const uint8_t before = screenTestButtons;
-    if (digitalRead(AwokPins::kButtonLeft) == LOW) screenTestButtons |= 1;
-    if (digitalRead(AwokPins::kButtonCenter) == LOW) screenTestButtons |= 2;
-    if (digitalRead(AwokPins::kButtonUp) == LOW) screenTestButtons |= 4;
-    if (digitalRead(AwokPins::kButtonRight) == LOW) screenTestButtons |= 8;
-    if (digitalRead(AwokPins::kButtonDown) == LOW) screenTestButtons |= 16;
+    if (miniButtonDown(AwokPins::kButtonLeft)) screenTestButtons |= 1;
+    if (miniButtonDown(AwokPins::kButtonCenter)) screenTestButtons |= 2;
+    if (miniButtonDown(AwokPins::kButtonUp)) screenTestButtons |= 4;
+    if (miniButtonDown(AwokPins::kButtonRight)) screenTestButtons |= 8;
+    if (miniButtonDown(AwokPins::kButtonDown)) screenTestButtons |= 16;
     if (screenTestButtons != before) drawScreenTest();
   }
 #else

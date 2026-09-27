@@ -19,6 +19,7 @@ Examples:
   python3 scripts/flash_firmware.py dual-c5-touch --port /dev/ttyACM0   # orange
   python3 scripts/flash_firmware.py dual-c5-touch --port /dev/ttyUSB0   # white
   python3 scripts/flash_firmware.py dual-c5-touch --build         # build then flash
+  python3 scripts/flash_firmware.py lilygo-t-dongle-c5-bridge --port /dev/ttyACM0
 """
 import argparse
 import glob
@@ -30,8 +31,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 # Chip family per board profile (mirrors build_firmware.py's FQBNs).
-C5 = ("dual-c5-touch", "dual-c5-mini", "dual-c5-bridge")
-CHIP = {b: ("esp32c5" if b in C5 else "esp32") for b in (
+C5 = ("dual-c5-touch", "dual-c5-mini", "dual-c5-bridge",
+      "lilygo-t-dongle-c5-bridge")
+CHIP = {b: ("esp32c5" if b in C5 else "esp32s3" if b == "cardputer-v11"
+            else "esp32") for b in (
+    "cardputer-v11", "lilygo-t-dongle-c5-bridge",
     "dual-c5-touch", "dual-c5-mini", "dual-c5-bridge",
     "dual-esp32-touch-v1", "dual-esp32-touch-v2", "dual-esp32-touch-v3",
     "dual-esp32-mini-v1", "dual-esp32-mini-v2", "dual-esp32-mini-v3",
@@ -52,7 +56,9 @@ def firmware_version() -> str:
 def find_esptool() -> str:
     candidates = sorted(
         glob.glob(str(Path.home() /
-                      ".arduino15/packages/esp32/tools/esptool_py/*/esptool")))
+                      ".arduino15/packages/esp32/tools/esptool_py/*/esptool")) +
+        glob.glob(str(Path.home() /
+                      "Library/Arduino15/packages/esp32/tools/esptool_py/*/esptool")))
     if not candidates:
         raise SystemExit(
             "esptool not found under the ESP32 Arduino core. Install the core "

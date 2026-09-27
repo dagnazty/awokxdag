@@ -12,6 +12,14 @@ ROOT = Path(__file__).resolve().parents[1]
 C5_FQBN = "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled"
 
 CLASSIC_FQBN = "esp32:esp32:esp32:FlashSize=4M,PartitionScheme=huge_app,PSRAM=disabled"
+CARDPUTER_V11_FQBN = (
+    "esp32:esp32:esp32s3:FlashSize=8M,PartitionScheme=default_8MB,"
+    "PSRAM=disabled,CDCOnBoot=cdc"
+)
+T_DONGLE_C5_FQBN = (
+    "esp32:esp32:esp32c5:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,"
+    "PSRAM=enabled,CDCOnBoot=cdc"
+)
 
 # AWOKxDAG is BLE Observer-only (scan; no client/server/adv anywhere in the
 # sketch), so NimBLE-Arduino's default Central/Peripheral/Broadcaster roles are
@@ -40,6 +48,7 @@ LINKER_WRAP_FLAGS = (
 )
 
 PROFILES = {
+    "cardputer-v11": (CARDPUTER_V11_FQBN, "AWOK_CARDPUTER_V11"),
     "dual-c5-touch": (C5_FQBN, "AWOK_DUAL_C5_TOUCH"),
     "dual-c5-mini": (C5_FQBN, "AWOK_DUAL_C5_MINI"),
     "dual-esp32-touch-v1": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V1"),
@@ -55,6 +64,8 @@ PROFILES = {
 # explicit for classic boards because their GPS and SD wiring differs.
 BRIDGES = {
     "dual-c5-bridge": (C5_FQBN, "AWOK_DUAL_C5_BRIDGE"),
+    "lilygo-t-dongle-c5-bridge":
+        (T_DONGLE_C5_FQBN, "AWOK_LILYGO_T_DONGLE_C5_BRIDGE"),
     "dual-esp32-touch-bridge-v1":
         (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_BRIDGE_V1"),
     "dual-esp32-touch-bridge-v2":
@@ -125,7 +136,8 @@ def main():
     metadata = output / "build-info.json"
     metadata.write_text(json.dumps({
         "version": version, "board": args.board, "fqbn": fqbn,
-        "experimental": args.board.startswith("dual-esp32"),
+        "experimental": args.board.startswith("dual-esp32") or args.board in
+                        ("cardputer-v11", "lilygo-t-dongle-c5-bridge"),
         "hardware_tested": args.board in ("dual-c5-touch", "dual-c5-mini"),
         "compile_command": command,
         "core": subprocess.check_output(["arduino-cli", "core", "list"], text=True),

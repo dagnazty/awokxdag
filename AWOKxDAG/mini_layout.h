@@ -6,8 +6,13 @@
 // Native 128px layout. Legacy coordinates identify existing actions only;
 // no portrait framebuffer or pixel scaling is used.
 struct MiniLayout {
+#ifdef AWOK_CARDPUTER_V11
+  static constexpr int width = 240, height = 135;
+  static constexpr int columns = 37, visible = 10, pitch = 10, bodyTop = 15;
+#else
   static constexpr int width = 128, height = 128;
   static constexpr int columns = 19, visible = 9, pitch = 11, bodyTop = 15;
+#endif
   static constexpr int maxItems = 96, maxLines = 512, textBytes = 96;
   enum Kind : uint8_t { text, bar, graph };
   struct Item {

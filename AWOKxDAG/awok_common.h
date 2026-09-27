@@ -46,6 +46,7 @@
 #include "board_pins.h"
 #include "keyboard_layout.h"
 #include "gps_timezone.h"
+#include "fleet_location.h"
 #include "file_crc.h"
 #include "wardrive_stats.h"
 #ifdef AWOK_MINI_DISPLAY
@@ -58,6 +59,9 @@
 bool radiosCoexist = false;
 #elif defined(AWOK_HEADLESS)
 #include "headless_display.h"  // orange bridge chip: no screen, BLE-driven
+#ifdef AWOK_LILYGO_T_DONGLE_C5_BRIDGE
+#include "t_dongle_display.h"  // logo/status on the dongle's small LCD
+#endif
 #include "result_memory.h"     // PSRAM-backed result tables (frees DMA)
 bool radiosCoexist = true;     // C5: Wi-Fi + BLE run resident together
 // Bridge BLE server hooks (defined in bridge_ble.ino); forward-declared so the
@@ -126,7 +130,7 @@ constexpr uint8_t kDeauthHopChannels[] = {
 constexpr int kDeauthHopChannelCount =
     static_cast<int>(sizeof(kDeauthHopChannels) / sizeof(kDeauthHopChannels[0]));
 constexpr int kMaxDeauthTargets = 8;
-constexpr char kVersion[] = "1.7.6";
+constexpr char kVersion[] = "1.7.7";
 constexpr char kAuthor[] = "dag nazty";
 constexpr uint32_t kHandshakeRedrawMs = 500;
 constexpr uint32_t kHandshakePulseMs = 2000;

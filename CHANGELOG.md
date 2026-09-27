@@ -5,6 +5,38 @@ All notable changes to AxD are documented here. This project follows
 
 ## [Unreleased]
 
+## [1.7.7] - 2026-09-27
+
+### Added
+
+- Experimental M5Stack Cardputer v1.1 profile for the 8 MB ESP32-S3 without
+  PSRAM: full-width 240 × 135 menu, onboard SD, physical keyboard, and 2.4 GHz
+  tools. The release workflow now builds Cardputer v1.1 merged and component
+  images with checksums alongside the existing board variants.
+- Experimental LILYGO T-Dongle-C5 headless bridge profile for linking a BLE
+  phone control page to the Cardputer over ESP-NOW. It uses the dongle's
+  16 MB flash, 8 MB PSRAM, and onboard SD wiring; the build, flash helper, and
+  release workflow package its merged and component images.
+- The T-Dongle-C5 screen shows a compact version of the existing AxD logo,
+  Bluetooth connection state, and microSD mount state while bridge commands
+  remain phone controlled.
+
+### Changed
+
+- Fleet Wardrive accepts Wi-Fi and BLE sightings from nodes without GPS,
+  stamps them with the coordinator's fresh GPS fix, and retries them if that
+  fix drops instead of writing unlocated rows. GPS-less boards no longer claim
+  GPS capability in the roster.
+- Cardputer menus use `;`/`,`/`.`/`/` for up/left/down/right, **Enter** to
+  select, and the top-left `~` key to go back without Fn. In text fields,
+  punctuation types normally; Fn with those keys navigates, and Fn+`~` or
+  Tab cancels.
+
+### Fixed
+
+- Bridge BLE advertising puts the `AxD-Bridge` name in the scan response so it
+  fits alongside the 128-bit service UUID and appears in Bluetooth discovery.
+
 ## [1.7.6] - 2026-09-26
 
 ### Changed
@@ -1105,7 +1137,8 @@ All notable changes to AxD are documented here. This project follows
 - Touchscreen UI, SD capture manager, status screens, serial controls, build
   workflow, and recovery documentation.
 
-[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.6...HEAD
+[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.7...HEAD
+[1.7.7]: https://github.com/dagnazty/awokxdag/compare/v1.7.6...v1.7.7
 [1.7.6]: https://github.com/dagnazty/awokxdag/compare/v1.7.5...v1.7.6
 [1.7.5]: https://github.com/dagnazty/awokxdag/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/dagnazty/awokxdag/compare/v1.7.3...v1.7.4

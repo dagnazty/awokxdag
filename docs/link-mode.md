@@ -60,6 +60,15 @@ Split pair must be unpaired before starting a Fleet.
 - In an all-C5 fleet, the Wi-Fi workers evenly split the full dual-band plan.
 - Band pools use independent modulo slices, so no two Wi-Fi workers receive the
   same channel.
+- Fleet workers can scan Wi-Fi or BLE without local GPS. A worker includes its
+  own fresh coordinates when it has them; otherwise the coordinator stamps its
+  row with the coordinator's fresh GPS fix. If the coordinator has no fix,
+  GPS-less worker rows stay unacknowledged and are retried from the worker's
+  bounded queue; the coordinator also pauses its own row logging. No row is
+  written with blank or false `0,0`
+  coordinates. Keep the nodes close together when sharing the coordinator's
+  position. Solo and Split still require each scanning board's own GPS fix.
+  Update every fleet node to this firmware before relying on GPS-less scanning.
 
 See `AWOKxDAG/link.ino` for the state machine.
 

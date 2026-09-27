@@ -1,8 +1,35 @@
 // AWOKxDAG — touch + serial input dispatch (compiled as part of the sketch; see awok_common.h)
 
+#ifdef AWOK_MINI_DISPLAY
+#ifdef AWOK_CARDPUTER_V11
+bool cardputerSuppressCenter = false;
+#endif
+bool miniButtonDown(int pin) {
+#ifdef AWOK_CARDPUTER_V11
+  auto& keyboard = M5Cardputer.Keyboard;
+  if (!keyboard.keysState().enter) cardputerSuppressCenter = false;
+  if (currentView == View::kNetworkEdit && !keyboard.keysState().fn) return false;
+  if (pin == AwokPins::kButtonLeft)
+    return keyboard.isKeyPressed(',') || keyboard.isKeyPressed('<');
+  if (pin == AwokPins::kButtonRight)
+    return keyboard.isKeyPressed('/') || keyboard.isKeyPressed('?');
+  if (pin == AwokPins::kButtonUp)
+    return keyboard.isKeyPressed(';') || keyboard.isKeyPressed(':');
+  if (pin == AwokPins::kButtonDown)
+    return keyboard.isKeyPressed('.') || keyboard.isKeyPressed('>');
+  if (pin == AwokPins::kButtonCenter)
+    return currentView != View::kNetworkEdit && keyboard.keysState().enter &&
+           !cardputerSuppressCenter;
+  return false;
+#else
+  return digitalRead(pin) == LOW;
+#endif
+}
+#endif
+
 bool readTouch(int& screenX, int& screenY) {
 #ifdef AWOK_MINI_DISPLAY
-  return digitalRead(AwokPins::kButtonCenter) == LOW &&
+  return miniButtonDown(AwokPins::kButtonCenter) &&
          display.selection(screenX, screenY);
 #else
   if (!touch.touched()) return false;
@@ -20,11 +47,11 @@ bool readTouch(int& screenX, int& screenY) {
 
 #ifdef AWOK_MINI_DISPLAY
 bool miniAnyButtonDown() {
-  return digitalRead(AwokPins::kButtonLeft) == LOW ||
-         digitalRead(AwokPins::kButtonCenter) == LOW ||
-         digitalRead(AwokPins::kButtonUp) == LOW ||
-         digitalRead(AwokPins::kButtonRight) == LOW ||
-         digitalRead(AwokPins::kButtonDown) == LOW;
+  return miniButtonDown(AwokPins::kButtonLeft) ||
+         miniButtonDown(AwokPins::kButtonCenter) ||
+         miniButtonDown(AwokPins::kButtonUp) ||
+         miniButtonDown(AwokPins::kButtonRight) ||
+         miniButtonDown(AwokPins::kButtonDown);
 }
 
 void updateMiniJoystick() {
@@ -36,13 +63,13 @@ void updateMiniJoystick() {
     return;
   }
   if (currentView == View::kScreenTest) {
-    if (digitalRead(AwokPins::kButtonLeft) == LOW &&
+    if (miniButtonDown(AwokPins::kButtonLeft) &&
         static_cast<int32_t>(now - nextMove) >= 0) {
       nextMove = now + 300;
       noteActivity();
       stopScreenTest();
-    } else if ((digitalRead(AwokPins::kButtonRight) == LOW ||
-                digitalRead(AwokPins::kButtonDown) == LOW) &&
+    } else if ((miniButtonDown(AwokPins::kButtonRight) ||
+                miniButtonDown(AwokPins::kButtonDown)) &&
                static_cast<int32_t>(now - nextMove) >= 0) {
       nextMove = now + 300;
       noteActivity();
@@ -51,11 +78,11 @@ void updateMiniJoystick() {
     return;
   }
   // Holding center never moves selection into another control.
-  if (digitalRead(AwokPins::kButtonCenter) == LOW) return;
-  const int direction = digitalRead(AwokPins::kButtonLeft) == LOW ? -2 :
-      digitalRead(AwokPins::kButtonRight) == LOW ? 2 :
-      digitalRead(AwokPins::kButtonUp) == LOW ? -1 :
-      digitalRead(AwokPins::kButtonDown) == LOW ? 1 : 0;
+  if (miniButtonDown(AwokPins::kButtonCenter)) return;
+  const int direction = miniButtonDown(AwokPins::kButtonLeft) ? -2 :
+      miniButtonDown(AwokPins::kButtonRight) ? 2 :
+      miniButtonDown(AwokPins::kButtonUp) ? -1 :
+      miniButtonDown(AwokPins::kButtonDown) ? 1 : 0;
   if (!direction) { lastDirection = 0; return; }
   const bool first = direction != lastDirection;
   if (first || static_cast<int32_t>(now - nextMove) >= 0) {
@@ -79,13 +106,15 @@ bool consumeTouchPress(bool pressed, uint32_t now) {
   return true;
 }
 
+void dispatchTouch(int x, int y);
+
 void handleTouch() {
   if (scanInProgress) return;
   int x = 0;
   int y = 0;
 #ifdef AWOK_MINI_DISPLAY
   const bool pressed = currentView == View::kScreenTest
-                           ? digitalRead(AwokPins::kButtonCenter) == LOW
+                           ? miniButtonDown(AwokPins::kButtonCenter)
                            : readTouch(x, y);
   if (currentView == View::kScreenTest) {
     x = 120;
@@ -100,6 +129,10 @@ void handleTouch() {
   }
   if (!consumeTouchPress(pressed, millis())) return;
   noteActivity();
+  dispatchTouch(x, y);
+}
+
+void dispatchTouch(int x, int y) {
   // Keyboard coordinates can reveal password characters even when masked.
   if (currentView != View::kNetworkEdit) Serial.printf("[touch] x=%d y=%d\n", x, y);
   if (currentView == View::kScreenTest) {
@@ -727,6 +760,66 @@ void handleTouch() {
     scanWifi();
   }
 }
+
+#ifdef AWOK_CARDPUTER_V11
+// The v1.1 keyboard reports the top-left ~ key as backtick or tilde.
+// Dispatch the screen's own Back/Cancel/Stop control so nested menus and
+// running tools keep their existing cleanup and return behavior.
+void handleCardputerEscape() {
+  static bool wasDown = false;
+  const auto& keys = M5Cardputer.Keyboard.keysState();
+  const bool down = M5Cardputer.Keyboard.isKeyPressed('`') ||
+                    M5Cardputer.Keyboard.isKeyPressed('~');
+  const bool pressed = down && !wasDown;
+  wasDown = down;
+  if (!pressed) return;
+  if (backlightDimmed) { noteActivity(); return; }
+  noteActivity();
+  if (scanInProgress) return;
+  if (currentView == View::kNetworkEdit) {
+    // In text entry the plain key keeps typing punctuation; Fn invokes Esc.
+    if (keys.fn) cancelNetworkEditor();
+    return;
+  }
+  if (currentView == View::kScreenTest) {
+    stopScreenTest();
+    return;
+  }
+  if (currentView == View::kHome && !homeOverlay) {
+    if (homePage > 0) {
+      --homePage;
+      drawHome();
+    }
+    return;
+  }
+  // Network Tools shows a Back button while a job runs, but disables it
+  // until the job is cancelled. Use the visible Cancel/Stop action first.
+  static const char* const actions[] = {
+      "Back", "Cancel", "Leave", "Groups", "Stop", "Home"};
+  static const char* const runningActions[] = {
+      "Cancel", "Stop", "Back", "Leave", "Groups", "Home"};
+  const char* const* preferred = networkToolsOpen() &&
+                                 cardputerNetworkJobActive()
+                                     ? runningActions : actions;
+  for (int actionIndex = 0; actionIndex < 6; ++actionIndex) {
+    const char* action = preferred[actionIndex];
+    const size_t length = strlen(action);
+    for (int i = 0; i < display.layout.count; ++i) {
+      const MiniLayout::Item& item = display.layout.items[i];
+      if (!item.action() || strncmp(item.label, action, length) != 0) continue;
+      const char next = item.label[length];
+      if (next != '\0' && next != ' ' && next != '/') continue;
+      dispatchTouch(item.targetX, item.targetY);
+      return;
+    }
+  }
+  if (currentView == View::kHome && homeOverlay) {
+    homeOverlay = false;
+    homePage = 0;
+    drawHome();
+  }
+}
+#endif
 
 bool toolBlocksSerialShortcuts() {
   return deauthAttackActive || deauthMonitorActive || handshakeCaptureActive ||

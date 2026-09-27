@@ -3,7 +3,7 @@
 **Dual-band Wi-Fi / BLE penetration-testing toolkit for the ESP32-C5** (AWOK Dual
 C5, white-USB screen board with an ILI9341 touchscreen).
 
-- **Version:** 1.7.6
+- **Version:** 1.7.7
 - **Author:** dag nazty
 - **Target:** ESP32-C5 Dev Module, 8 MB flash, PSRAM, microSD
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
@@ -11,6 +11,16 @@ C5, white-USB screen board with an ILI9341 touchscreen).
 Experimental **original Dual ESP32 Touch v1/v2/v3** profiles are also available (2.4 GHz only).
 
 Original **Dual ESP32 Mini v1/v2/v3** builds are available as well.
+
+An experimental **M5Stack Cardputer v1.1** profile is available for 2.4 GHz
+use. It uses the full 240 × 135 screen and physical keyboard, and is included
+in the release firmware assets. See the
+[Cardputer v1.1 port notes](docs/cardputer-v1.1-port.md) for validation status.
+
+An experimental **LILYGO T-Dongle-C5** profile adds the BLE phone bridge for
+the Cardputer. Its screen shows the AxD logo plus BLE and SD status. The 16 MB
+flash and PSRAM are configured in the release build;
+see the [T-Dongle-C5 bridge notes](docs/t-dongle-c5-bridge.md).
 
 > ## Authorized use only
 > This firmware transmits and disrupts networks (deauthentication, beacon
@@ -251,14 +261,20 @@ page; an already stopped detector shows **Back**. **Groups** returns to the pick
   partner-lost alert. Each board logs its own session WiGLE CSV and uses its
   own GPS. The unpaired option covers every channel with Wi-Fi only. Reached
   from GPS → Drive modes → Split; Solo mode remains the Wi-Fi + BLE entry.
-- **Fleet Wardrive** — links up to six C5 or classic ESP32 Touch/Mini boards in an explicit
+- **Fleet Wardrive** — links up to six C5, classic ESP32 Touch/Mini, Cardputer v1.1,
+  or T-Dongle-C5 bridge boards in an explicit
   coordinator/worker topology. Press **Start** on one chip to make it the stable
   coordinator, then **Join** on each worker. The coordinator assigns Wi-Fi/BLE
   roles, maintains a live node count with heartbeats, and merges every worker's
   rows into one WiGLE CSV. Exactly one node is BLE-only. Classic WROOM workers
   take precedence on 2.4 GHz and split its channels without overlap; C5 workers
   split 5 GHz without overlap. In an all-C5 fleet, the C5 Wi-Fi workers split
-  the full dual-band plan. The coordinator/node ESP-NOW design was informed by
+  the full dual-band plan. Nodes without GPS can scan and send sightings. The
+  coordinator stamps those rows with its own fresh GPS fix; if its fix drops,
+  workers retry queued rows when it returns. Keep the fleet together when
+  sharing the coordinator's position, and update all fleet nodes to this
+  firmware for GPS-less scanning. The coordinator/node ESP-NOW
+  design was informed by
   **[Piglet](https://github.com/Hamspiced/piglet)** by **Hamspiced**, whose open
   mesh-node implementation provided the reference for keeping one Core
   authoritative while nodes discover, join, and reconnect to it.
@@ -456,8 +472,8 @@ python3 scripts/flash_firmware.py dual-c5-touch --build    # (re)build, then fla
 ```
 
 The port is autodetected when only one is present; pass `--port` if several
-serial devices are attached. Any board profile `build_firmware.py` accepts
-works here too.
+serial devices are attached. The flash helper also supports Cardputer v1.1
+and the LILYGO T-Dongle-C5 bridge profiles.
 
 ### Phone control over BLE (both chips)
 
@@ -501,7 +517,7 @@ then build and package the Mini profile:
 python3 scripts/build_firmware.py dual-c5-mini
 ```
 
-Outputs are in `build/dual-c5-mini-1.6.1/`, with explicit board names and
+Outputs are in `build/dual-c5-mini-<version>/`, with explicit board names and
 `SHA256SUMS`. This command only compiles and packages; it does not flash.
 The Mini uses a native 128 × 128 layout with readable text, highlighted menu
 rows, wrapped details, and compact charts. Up/down moves through rows, center
@@ -509,6 +525,43 @@ selects, right jumps to actions, and left returns to the top of the screen. At
 boot it shows the same AWOK logo as the Touch board, downscaled to 96 × 128 by
 `scripts/gen_mini_boot.py` (re-run with `--threshold` to retune the 1-bit art).
 Use `dual-c5-touch` with the same script to package the default Touch build.
+
+### M5Stack Cardputer v1.1 (experimental)
+
+Build the Cardputer's 8 MB ESP32-S3 profile with M5Cardputer 1.1.1 and its
+M5Unified/M5GFX dependencies installed. The release workflow installs these
+libraries and publishes `awokxdag-cardputer-v11-merged.bin` alongside the
+component images and `SHA256SUMS`.
+
+```bash
+python3 scripts/build_firmware.py cardputer-v11
+esptool --chip esp32s3 --port PORT write-flash 0x0 awokxdag-cardputer-v11-merged.bin
+```
+
+The flash command uses the downloaded release image. A local build writes its
+merged image under `build/cardputer-v11-<version>/`. In menus, **;** moves up, **,** left,
+**.** down, **/** right, **Enter** selects, and the top-left **~** key goes back
+without Fn. In text fields, punctuation types normally; hold **Fn** with the
+navigation keys to move among actions, and use **Fn+~** or **Tab** to cancel.
+The Cardputer has no PSRAM and supports 2.4 GHz only. See the
+[port notes](docs/cardputer-v1.1-port.md) for hardware observations and recovery.
+
+### Cardputer + LILYGO T-Dongle-C5 phone bridge (experimental)
+
+The T-Dongle-C5 runs the headless `AxD-Bridge` BLE service. The phone control
+page can target **This bridge** for tools on the dongle or **Screen chip** to
+relay commands to the Cardputer over ESP-NOW. The dongle has 16 MB flash and
+8 MB PSRAM; its onboard screen shows the AxD logo and bridge status.
+
+```bash
+python3 scripts/build_firmware.py lilygo-t-dongle-c5-bridge
+python3 scripts/flash_firmware.py lilygo-t-dongle-c5-bridge --port PORT
+```
+
+The release workflow packages
+`awokxdag-lilygo-t-dongle-c5-bridge-merged.bin`. See the
+[T-Dongle-C5 bridge notes](docs/t-dongle-c5-bridge.md) for the BOOT procedure,
+factory-firmware backup, wiring, and two-device setup.
 
 ### Original ESP32 boards (2.4 GHz)
 

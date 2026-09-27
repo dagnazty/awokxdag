@@ -23,6 +23,10 @@ test('unknown, stale, disconnected, stopped and failed storage never claim healt
   t.receive({13:0});assert.equal(t.read('state'),'NO SD RECORDING');
   t.receive({13:3});assert.equal(t.read('state'),'SD WRITE FAILED');
   t.receive({21:0});assert.equal(t.read('state'),'Waiting for GPS');
+  t.receive({20:2,21:0,13:1,14:0});assert.equal(t.read('state'),'Waiting for coordinator GPS');
+  t.receive({20:2,21:1,13:2,14:4});assert.equal(t.read('state'),'Recording');
+  t.receive({20:3,21:0,13:4});assert.equal(t.read('state'),'Relaying to coordinator');
+  assert.equal(t.read('gps'),'Coordinator provides location');
   t.receive();t.tick(21000);assert.equal(t.read('state'),'Telemetry stale');assert.equal(t.read('gps'),'Unknown (stale)');
   t.receive({4:0});assert.equal(t.read('state'),'Stopped');
   t.connection.connected=false;t.tick(1);assert.equal(t.read('state'),'Telemetry stale');

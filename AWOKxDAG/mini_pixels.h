@@ -5,7 +5,11 @@
 // The native UI uses this fixed palette. Two pixels share one byte, saving
 // 24 KB versus an RGB565 canvas while preserving all current UI colors.
 struct MiniPixels {
+#ifdef AWOK_CARDPUTER_V11
+  static constexpr int width = 240, height = 135;
+#else
   static constexpr int width = 128, height = 128;
+#endif
   static constexpr uint16_t palette[16] = {
       0x0000, 0xffff, 0x07ff, 0x001f, 0x07e0, 0xf800, 0xffe0, 0x2104,
       0x7bef, 0x1082, 0xf81f, 0xfd20, 0x4208, 0x8410, 0xc618, 0x03ef};

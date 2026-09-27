@@ -1,6 +1,6 @@
 // Arduino IDE selection.
 #if !defined(AWOK_DUAL_C5_TOUCH) && !defined(AWOK_DUAL_C5_MINI) && \
-    !defined(AWOK_DUAL_C5_BRIDGE) && \
+    !defined(AWOK_DUAL_C5_BRIDGE) && !defined(AWOK_LILYGO_T_DONGLE_C5_BRIDGE) && \
     !defined(AWOK_DUAL_ESP32_TOUCH_V1) && !defined(AWOK_DUAL_ESP32_TOUCH_V2) && \
     !defined(AWOK_DUAL_ESP32_TOUCH_V3) && \
     !defined(AWOK_DUAL_ESP32_MINI_V1) && !defined(AWOK_DUAL_ESP32_MINI_V2) && \
@@ -10,7 +10,7 @@
     !defined(AWOK_DUAL_ESP32_TOUCH_BRIDGE_V3) && \
     !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V1) && \
     !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V2) && \
-    !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V3)
+    !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V3) && !defined(AWOK_CARDPUTER_V11)
 //#define AWOK_DUAL_C5_TOUCH
 #define AWOK_DUAL_C5_MINI
 //#define AWOK_DUAL_ESP32_TOUCH_V1
@@ -36,7 +36,10 @@ extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2,
 #ifdef AWOK_MINI_DISPLAY
 AwokMiniDisplay display;
 #elif defined(AWOK_HEADLESS)
-AwokHeadlessDisplay display;  // no-op sink; the bridge has no screen
+AwokHeadlessDisplay display;  // no-op sink for menu rendering on BLE bridges
+#ifdef AWOK_LILYGO_T_DONGLE_C5_BRIDGE
+AwokDongleDisplay bridgePanel;
+#endif
 // No touch panel on the bridge; a stub keeps every touch.* call compiling and
 // inert (touched() == false), so the input paths just never report a press.
 struct AwokHeadlessTouch {
@@ -394,8 +397,10 @@ String bytesToHex(const std::string& data, size_t maximumBytes) {
 }
 
 bool initializeSdCard() {
+#ifndef AWOK_CARDPUTER_V11
   digitalWrite(AwokPins::kDisplayCs, HIGH);
   if (AwokPins::kTouchCs >= 0) digitalWrite(AwokPins::kTouchCs, HIGH);
+#endif
   digitalWrite(AwokPins::kSdCs, HIGH);
 
   if (!SD.begin(AwokPins::kSdCs, SPI, kSdClockHz) ||
@@ -2517,7 +2522,26 @@ void initializeDisplayAndTouch() {
 #ifdef AWOK_HEADLESS
   display.begin();
   display.setTextWrap(false);
+#ifdef AWOK_LILYGO_T_DONGLE_C5_BRIDGE
+  // LCD and microSD share the bus and have independent chip selects.
+  pinMode(AwokPins::kDisplayCs, OUTPUT);
+  digitalWrite(AwokPins::kDisplayCs, HIGH);
+  pinMode(AwokPins::kSdCs, OUTPUT);
+  digitalWrite(AwokPins::kSdCs, HIGH);
+  SPI.begin(AwokPins::kSpiSck, AwokPins::kSpiMiso, AwokPins::kSpiMosi,
+            AwokPins::kSdCs);
+  bridgePanel.begin();
+#endif
 #elif defined(AWOK_MINI_DISPLAY)
+#ifdef AWOK_CARDPUTER_V11
+  if (!display.begin()) {
+    while (true) delay(1000);
+  }
+  pinMode(AwokPins::kSdCs, OUTPUT);
+  digitalWrite(AwokPins::kSdCs, HIGH);
+  SPI.begin(AwokPins::kSpiSck, AwokPins::kSpiMiso, AwokPins::kSpiMosi,
+            AwokPins::kSdCs);
+#else
   for (int pin : {AwokPins::kButtonLeft, AwokPins::kButtonCenter,
                   AwokPins::kButtonUp, AwokPins::kButtonRight,
                   AwokPins::kButtonDown}) {
@@ -2533,6 +2557,7 @@ void initializeDisplayAndTouch() {
   if (!display.begin()) {
     while (true) delay(1000);
   }
+#endif
   display.setTextWrap(false);
 #else
   pinMode(AwokPins::kDisplayCs, OUTPUT);
@@ -2601,6 +2626,9 @@ void setup() {
     delay(kBootScreenMs);
   }
   initializeSdCard();
+#ifdef AWOK_LILYGO_T_DONGLE_C5_BRIDGE
+  bridgePanel.update(sdReady, false, false);
+#endif
   initGps();
   initializeFirmwareAudit();
   recordFirmwareAudit(
@@ -2614,6 +2642,9 @@ void setup() {
 #ifdef AWOK_HEADLESS
   bridgeBleBegin();  // orange bridge: run the BLE GATT server the phone connects
                      // to; commands dispatch locally or relay to the white chip.
+#ifdef AWOK_LILYGO_T_DONGLE_C5_BRIDGE
+  bridgePanel.update(sdReady, true, g_bridgePhoneConnected);
+#endif
 #else
   remoteBegin();  // Touch and Mini alike: listen for the orange bridge chip so
                   // a phone can drive this screen chip over ESP-NOW.
@@ -2638,6 +2669,11 @@ void loop() {
   }
 #endif
 #ifdef AWOK_MINI_DISPLAY
+#ifdef AWOK_CARDPUTER_V11
+  M5Cardputer.update();
+  handleCardputerEscape();
+  handleCardputerTextInput();
+#endif
   updateMiniJoystick();
 #endif
   handleTouch();
@@ -2679,6 +2715,9 @@ void loop() {
   updateLink();
 #ifdef AWOK_HEADLESS
   bridgeServiceCommand();  // run any phone command off the BLE host task
+#ifdef AWOK_LILYGO_T_DONGLE_C5_BRIDGE
+  bridgePanel.update(sdReady, true, g_bridgePhoneConnected);
+#endif
   // Bridge: stream live status to the phone about once a second (no ESP-NOW).
   static uint32_t lastBridgeStatusMs = 0;
   if (g_bridgePhoneConnected && millis() - lastBridgeStatusMs >= 1000) {

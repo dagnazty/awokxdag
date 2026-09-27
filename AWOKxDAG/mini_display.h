@@ -1,6 +1,9 @@
 #pragma once
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
+#ifdef AWOK_CARDPUTER_V11
+#include <M5Cardputer.h>
+#endif
 #include <new>
 #include "board_pins.h"
 #include "mini_layout.h"
@@ -9,14 +12,14 @@
 
 class MiniCanvas : public Adafruit_GFX {
  public:
-  MiniCanvas() : Adafruit_GFX(128, 128) {}
+  MiniCanvas() : Adafruit_GFX(MiniPixels::width, MiniPixels::height) {}
   void drawPixel(int16_t x, int16_t y, uint16_t color) override {
     pixels.setIndex(x, y, MiniPixels::colorIndex(color));
   }
   void fillScreen(uint16_t color) override { pixels.fill(color); }
   void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) override {
-    const int right = std::min(128, int(x) + w);
-    const int bottom = std::min(128, int(y) + h);
+    const int right = std::min(MiniPixels::width, int(x) + w);
+    const int bottom = std::min(MiniPixels::height, int(y) + h);
     const uint8_t index = MiniPixels::colorIndex(color);
     for (int row = std::max(0, int(y)); row < bottom; ++row)
       for (int col = std::max(0, int(x)); col < right; ++col)
@@ -27,14 +30,25 @@ class MiniCanvas : public Adafruit_GFX {
 
 class AwokMiniDisplay : public Adafruit_GFX {
  public:
-  AwokMiniDisplay() : Adafruit_GFX(128, 128),
+  AwokMiniDisplay() : Adafruit_GFX(MiniPixels::width, MiniPixels::height)
+#ifndef AWOK_CARDPUTER_V11
+      ,
       panel_(&SPI, AwokPins::kDisplayCs, AwokPins::kDisplayDc,
              AwokPins::kDisplayReset) {}
+#else
+      {}
+#endif
   bool begin() {
+#ifdef AWOK_CARDPUTER_V11
+    M5Cardputer.begin();
+    panel_.setRotation(1);
+    panel_.setBrightness(255);
+#else
     panel_.initR(INITR_144GREENTAB);
     panel_.setSPISpeed(20000000);
     panel_.setRotation(0);
     digitalWrite(AwokPins::kBacklight, AwokPins::kBacklightOn ? HIGH : LOW);
+#endif
     canvas_ = new (std::nothrow) MiniCanvas();
     if (!canvas_) {
       panel_.fillScreen(ST7735_BLACK);
@@ -106,14 +120,20 @@ class AwokMiniDisplay : public Adafruit_GFX {
   void splash(const uint8_t* bitmap, int w, int h) {
     if (!canvas_) return;
     canvas_->fillScreen(ST7735_BLACK);
-    canvas_->drawXBitmap((128 - w) / 2, std::max(0, (128 - h) / 2), bitmap, w, h,
+    canvas_->drawXBitmap((MiniPixels::width - w) / 2,
+                         std::max(0, (MiniPixels::height - h) / 2), bitmap, w, h,
                          ST7735_WHITE);
     blitCanvas();
     dirty_ = redraw_ = true;  // force a full rebuild on the next present()
   }
   void keyboard(const char* title, const char* preview, int length, int limit,
                 AwokKeyboard::Mode mode, bool pending) {
-    if (!keyboardActive_) keyboardFocus_ = 1;  // 2 / abc
+    if (!keyboardActive_) {
+      keyboardFocus_ = 1;  // 2 / abc
+#ifdef AWOK_CARDPUTER_V11
+      editorAction_ = 2;
+#endif
+    }
     keyboardActive_ = true;
     keyboardMode_ = mode;
     keyboardPending_ = pending;
@@ -122,7 +142,8 @@ class AwokMiniDisplay : public Adafruit_GFX {
     strncpy(keyboardTitle_, title, sizeof(keyboardTitle_) - 1);
     const size_t count = strlen(preview);
     // Always keep the insertion point visible. Passwords arrive masked.
-    strncpy(keyboardPreview_, preview + (count > 18 ? count - 18 : 0),
+    const size_t visible = sizeof(keyboardPreview_) - 2;
+    strncpy(keyboardPreview_, preview + (count > visible ? count - visible : 0),
             sizeof(keyboardPreview_) - 1);
     if (!AwokKeyboard::key(keyboardFocus_, mode).valid()) keyboardFocus_ = 0;
     dirty_ = true;
@@ -130,8 +151,8 @@ class AwokMiniDisplay : public Adafruit_GFX {
   void dashboardLine(int row, const char* text, uint16_t color) {
     if (row < 0 || row >= 9) return;
     dashboardActive_ = true;
-    strncpy(dashboardLines_[row], text, 21);
-    dashboardLines_[row][21] = 0;
+    strncpy(dashboardLines_[row], text, sizeof(dashboardLines_[row]) - 1);
+    dashboardLines_[row][sizeof(dashboardLines_[row]) - 1] = 0;
     dashboardColors_[row] = color;
     dirty_ = true;
   }
@@ -148,10 +169,14 @@ class AwokMiniDisplay : public Adafruit_GFX {
       x = layout.items[i].targetX; y = layout.items[i].targetY; return true;
     }
     if (!keyboardActive_) return layout.selection(x, y);
+#ifdef AWOK_CARDPUTER_V11
+    return false;  // Cardputer editor actions are handled by physical keys.
+#else
     const auto key = AwokKeyboard::key(keyboardFocus_, keyboardMode_);
     x = key.x + key.w / 2;
     y = key.y + key.h / 2;
     return key.valid();
+#endif
   }
   void navigate(int direction, bool jump = false) {
     if (dashboardActive_) {
@@ -160,8 +185,13 @@ class AwokMiniDisplay : public Adafruit_GFX {
       redraw_ = true; return;
     }
     if (keyboardActive_) {
+#ifdef AWOK_CARDPUTER_V11
+      if (direction < 0) editorAction_ = std::max(0, editorAction_ - 1);
+      else if (direction > 0) editorAction_ = std::min(2, editorAction_ + 1);
+#else
       keyboardFocus_ = AwokKeyboard::move(keyboardFocus_, direction, jump,
                                           keyboardMode_);
+#endif
       redraw_ = true;
       return;
     }
@@ -204,16 +234,16 @@ class AwokMiniDisplay : public Adafruit_GFX {
   }
   void diagnosticChecker(uint16_t a, uint16_t b, int cell) {
     diagnostic_ = true;
-    for (int y = 0; y < 128; y += cell)
-      for (int x = 0; x < 128; x += cell)
+    for (int y = 0; y < MiniPixels::height; y += cell)
+      for (int x = 0; x < MiniPixels::width; x += cell)
         panel_.fillRect(x, y, cell, cell,
                         ((x / cell) + (y / cell)) & 1 ? a : b);
   }
   void diagnosticFirmwareChecker(uint16_t a, uint16_t b, int cell) {
     diagnostic_ = true;
     if (!canvas_) return;
-    for (int y = 0; y < 128; ++y)
-      for (int x = 0; x < 128; ++x)
+    for (int y = 0; y < MiniPixels::height; ++y)
+      for (int x = 0; x < MiniPixels::width; ++x)
         canvas_->drawPixel(x, y, ((x / cell) + (y / cell)) & 1 ? a : b);
     blitCanvas();
   }
@@ -231,12 +261,16 @@ class AwokMiniDisplay : public Adafruit_GFX {
       int count = 0;
       while (dashboardButton(count) >= 0) ++count;
       for (int i = 0; i < count; ++i) {
-        const int x = i * 128 / count, w = 128 / count;
+        const int x = i * MiniPixels::width / count;
+        const int w = MiniPixels::width / count;
         const bool focused = i == dashboardFocus_;
-        canvas_->fillRect(x, 110, w - 1, 17, focused ? ST7735_CYAN : ST7735_BLUE);
+        canvas_->fillRect(x, MiniPixels::height - 18, w - 1, 17,
+                          focused ? ST7735_CYAN : ST7735_BLUE);
         canvas_->setTextColor(focused ? ST7735_BLACK : ST7735_WHITE);
         const char* label = layout.items[dashboardButton(i)].label;
-        canvas_->setCursor(x + (w - int(strlen(label)) * 6) / 2, 115); canvas_->print(label);
+        canvas_->setCursor(x + (w - int(strlen(label)) * 6) / 2,
+                           MiniPixels::height - 13);
+        canvas_->print(label);
       }
       blitCanvas(); dirty_ = redraw_ = false; return;
     }
@@ -251,9 +285,9 @@ class AwokMiniDisplay : public Adafruit_GFX {
     canvas_->setTextSize(1);
     canvas_->setTextColor(ST7735_CYAN);
     canvas_->setCursor(1, 2);
-    char heading[22] = {};
-    strncpy(heading, layout.title, 21); canvas_->print(heading);
-    canvas_->drawFastHLine(0, 12, 128, ST7735_BLUE);
+    char heading[MiniLayout::columns + 1] = {};
+    strncpy(heading, layout.title, MiniLayout::columns); canvas_->print(heading);
+    canvas_->drawFastHLine(0, 12, MiniPixels::width, ST7735_BLUE);
     for (int row = 0; row < MiniLayout::visible; ++row) {
       const int index = layout.top + row;
       if (index >= layout.lineCount) break;
@@ -261,12 +295,15 @@ class AwokMiniDisplay : public Adafruit_GFX {
       const auto& item = layout.items[line.item];
       const int y = MiniLayout::bodyTop + row * MiniLayout::pitch;
       const bool focus = index == layout.focus;
-      if (focus) canvas_->fillRect(0, y - 1, 126, 11, 0x2104);
+      if (focus) canvas_->fillRect(0, y - 1, MiniPixels::width - 2,
+                                  MiniLayout::pitch, 0x2104);
       if (item.kind == MiniLayout::graph) {
         drawGraphSlice(y, line.offset);
       } else if (item.kind == MiniLayout::bar && line.offset == 1) {
-        canvas_->drawRect(8, y, 114, 7, ST7735_BLUE);
-        const int size = std::max(0, std::min(112, item.value * 112 / item.maximum));
+        canvas_->drawRect(8, y, MiniPixels::width - 14, 7, ST7735_BLUE);
+        const int barWidth = MiniPixels::width - 16;
+        const int size = std::max(0, std::min(barWidth,
+            item.value * barWidth / item.maximum));
         canvas_->fillRect(9, y + 1, size, 5, ST7735_CYAN);
       } else {
         char label[MiniLayout::columns + 1] = {};
@@ -287,15 +324,22 @@ class AwokMiniDisplay : public Adafruit_GFX {
       }
     }
     if (layout.lineCount > MiniLayout::visible) {
-      const int h = std::max(3, 99 * MiniLayout::visible / layout.lineCount);
-      const int y = 15 + (99 - h) * layout.top /
+      const int bodyHeight = MiniPixels::height - 29;
+      const int h = std::max(3, bodyHeight * MiniLayout::visible / layout.lineCount);
+      const int y = 15 + (bodyHeight - h) * layout.top /
           std::max(1, layout.lineCount - MiniLayout::visible);
-      canvas_->fillRect(127, y, 1, h, ST7735_CYAN);
+      canvas_->fillRect(MiniPixels::width - 1, y, 1, h, ST7735_CYAN);
     }
-    canvas_->drawFastHLine(0, 115, 128, ST7735_BLUE);
+    canvas_->drawFastHLine(0, MiniPixels::height - 13,
+                           MiniPixels::width, ST7735_BLUE);
     canvas_->setTextColor(layout.overflow ? ST7735_RED : ST7735_CYAN);
-    canvas_->setCursor(1, 119);
+    canvas_->setCursor(1, MiniPixels::height - 10);
+#ifdef AWOK_CARDPUTER_V11
+    canvas_->print(layout.overflow ? "Content limit reached"
+                                   : ";up ,left .down /right Enter ~:back");
+#else
     canvas_->print(layout.overflow ? "Content limit reached" : "L:top R:acts C:select");
+#endif
     blitCanvas();
     dirty_ = redraw_ = false;
   }
@@ -307,7 +351,7 @@ class AwokMiniDisplay : public Adafruit_GFX {
     canvas_->setTextColor(ST7735_CYAN);
     canvas_->setCursor(2, 2);
     canvas_->print(keyboardTitle_);
-    canvas_->drawRoundRect(2, 12, 124, 13, 2, ST7735_BLUE);
+    canvas_->drawRoundRect(2, 12, MiniPixels::width - 4, 13, 2, ST7735_BLUE);
     canvas_->setCursor(5, 15);
     canvas_->setTextColor(ST7735_WHITE);
     canvas_->print(keyboardPreview_);
@@ -315,6 +359,26 @@ class AwokMiniDisplay : public Adafruit_GFX {
     canvas_->setTextColor(keyboardLength_ == keyboardLimit_ ? ST7735_YELLOW : ST7735_CYAN);
     canvas_->setCursor(2, 27);
     canvas_->printf("%d/%d", keyboardLength_, keyboardLimit_);
+#ifdef AWOK_CARDPUTER_V11
+    canvas_->setTextColor(ST7735_WHITE);
+    canvas_->setCursor(2, 45); canvas_->print("Type normally; punctuation works.");
+    canvas_->setCursor(2, 59); canvas_->print("Fn + ; , . /: move action");
+    canvas_->setCursor(2, 73); canvas_->print("Enter: save   Fn+~/Tab: cancel");
+    canvas_->setCursor(2, 87); canvas_->print("Backspace: erase");
+    const char* actions[] = {"Cancel", "Delete", "Save"};
+    for (int i = 0; i < 3; ++i) {
+      const int x = i * MiniPixels::width / 3;
+      canvas_->fillRect(x + 1, 106, MiniPixels::width / 3 - 2, 18,
+                        i == editorAction_ ? ST7735_CYAN : ST7735_BLUE);
+      canvas_->setTextColor(i == editorAction_ ? ST7735_BLACK : ST7735_WHITE);
+      canvas_->setCursor(x + 12, 111);
+      canvas_->print(actions[i]);
+    }
+    canvas_->setTextColor(ST7735_CYAN);
+    canvas_->setCursor(2, 126);
+    canvas_->print("Fn+Enter: selected action");
+    return;
+#else
     canvas_->setCursor(64, 27);
     canvas_->printf("%s %s", AwokKeyboard::modeName(keyboardMode_), keyboardPending_ ? "tap" : "");
     for (int i = 0; i < AwokKeyboard::kSlots; ++i) {
@@ -335,47 +399,61 @@ class AwokMiniDisplay : public Adafruit_GFX {
         canvas_->print(key.sublabel);
       }
     }
+#endif
   }
   bool dashboardActive_ = false;
   int dashboardFocus_ = 0;
-  char dashboardLines_[9][22] = {};
+  char dashboardLines_[9][MiniLayout::columns + 1] = {};
   uint16_t dashboardColors_[9] = {};
   bool keyboardActive_ = false, keyboardPending_ = false;
+#ifdef AWOK_CARDPUTER_V11
+ public:
+  int editorAction() const { return editorAction_; }
+ private:
+  int editorAction_ = 2;
+#endif
   AwokKeyboard::Mode keyboardMode_ = AwokKeyboard::Lower;
   int keyboardFocus_ = 1, keyboardLength_ = 0, keyboardLimit_ = 32;
-  char keyboardTitle_[22] = {}, keyboardPreview_[20] = {};
+  char keyboardTitle_[22] = {}, keyboardPreview_[MiniLayout::columns + 1] = {};
   void blitCanvas() {
-    uint16_t pixels[128];
+    uint16_t pixels[MiniPixels::width];
     panel_.startWrite();
-    panel_.setAddrWindow(0, 0, 128, 128);
-    for (int y = 0; y < 128; ++y) {
-      for (int x = 0; x < 128; ++x) pixels[x] = canvas_->pixels.get(x, y);
-      panel_.writePixels(pixels, 128, true);
+    panel_.setAddrWindow(0, 0, MiniPixels::width, MiniPixels::height);
+    for (int y = 0; y < MiniPixels::height; ++y) {
+      for (int x = 0; x < MiniPixels::width; ++x)
+        pixels[x] = canvas_->pixels.get(x, y);
+      panel_.writePixels(pixels, MiniPixels::width, true);
     }
     panel_.endWrite();
   }
   void drawGraphSlice(int y, int part) {
-    // Draw only this 11px slice so scrolling cannot overwrite the header.
+    // Draw only this row slice so scrolling cannot overwrite the header.
     int previousX = -1, previousY = -1;
-    const int origin = y - part * 11;
+    const int origin = y - part * MiniLayout::pitch;
     for (int i = 0; i < layout.sampleCount; ++i) {
       const int value = layout.samples[i];
       if (value <= -127) { previousX = -1; continue; }
-      const int px = 9 + i * 112 / 29;
+      const int px = 9 + i * (MiniPixels::width - 16) / 29;
       const int py = origin + 40 - (std::max(-100, std::min(-30, value)) + 100) * 38 / 70;
       if (previousX >= 0) {
         for (int x = previousX; x <= px; ++x) {
           const int yy = previousY + (py - previousY) * (x - previousX) /
               std::max(1, px - previousX);
-          if (yy >= y && yy < y + 11) canvas_->drawPixel(x, yy, ST7735_GREEN);
+          if (yy >= y && yy < y + MiniLayout::pitch)
+            canvas_->drawPixel(x, yy, ST7735_GREEN);
         }
       }
-      if (py >= y && py < y + 11) canvas_->drawPixel(px, py, ST7735_GREEN);
+      if (py >= y && py < y + MiniLayout::pitch)
+        canvas_->drawPixel(px, py, ST7735_GREEN);
       previousX = px; previousY = py;
     }
-    canvas_->drawFastVLine(7, y, 11, ST7735_BLUE);
+    canvas_->drawFastVLine(7, y, MiniLayout::pitch, ST7735_BLUE);
   }
+#ifdef AWOK_CARDPUTER_V11
+  decltype(M5Cardputer.Display)& panel_ = M5Cardputer.Display;
+#else
   Adafruit_ST7735 panel_;
+#endif
   MiniCanvas* canvas_ = nullptr;
   bool dirty_ = true, redraw_ = false;
   bool diagnostic_ = false;

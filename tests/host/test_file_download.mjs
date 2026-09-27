@@ -10,7 +10,7 @@ const end = html.indexOf('\nfunction downloadBlob(', start);
 assert.ok(start >= 0 && end > start);
 const source = html.slice(start, end);
 const csv = Buffer.from(
-  'WigleWifi-1.6,appRelease=AxD,model=ESP32,release=1.7.3,device=AxD,display=none,board=AxD,brand=AxD\r\n' +
+  'WigleWifi-1.6,appRelease=AxD,model=ESP32,release=1.7.7,device=AxD,display=none,board=AxD,brand=AxD\r\n' +
   'MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type\r\n' +
   '00:11:22:33:44:55,Test,[OPEN],2026-09-22 12:00:00,1,2412,-55,42.0,-83.0,200,5,,,WIFI\r\n'
 );
