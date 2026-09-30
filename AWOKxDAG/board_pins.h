@@ -2,6 +2,7 @@
 
 // Explicit board profiles; reject mismatched silicon before touching GPIOs.
 #if (defined(AWOK_DUAL_C5_TOUCH) + defined(AWOK_DUAL_C5_MINI) + \
+     defined(AWOK_MARAUDER_MINI_V3) + \
      defined(AWOK_DUAL_C5_BRIDGE) + defined(AWOK_LILYGO_T_DONGLE_C5_BRIDGE) + \
      defined(AWOK_DUAL_ESP32_TOUCH_V1) + defined(AWOK_DUAL_ESP32_TOUCH_V2) + \
      defined(AWOK_DUAL_ESP32_TOUCH_V3) + \
@@ -27,7 +28,8 @@
     defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V3)
 #define AWOK_HEADLESS
 #endif
-#if defined(AWOK_CARDPUTER_V11) || defined(AWOK_DUAL_C5_MINI) || defined(AWOK_DUAL_ESP32_MINI_V1) || \
+#if defined(AWOK_CARDPUTER_V11) || defined(AWOK_DUAL_C5_MINI) || \
+    defined(AWOK_MARAUDER_MINI_V3) || defined(AWOK_DUAL_ESP32_MINI_V1) || \
     defined(AWOK_DUAL_ESP32_MINI_V2) || defined(AWOK_DUAL_ESP32_MINI_V3)
 #define AWOK_MINI_DISPLAY
 #endif
@@ -197,6 +199,16 @@ constexpr int kButtonCenter = 1;
 constexpr int kButtonUp = 4;
 constexpr int kButtonRight = 8;
 constexpr int kButtonDown = 9;
+#elif defined(AWOK_MARAUDER_MINI_V3)
+constexpr char kBoardLabel[] = "Marauder Mini v3";
+constexpr int kBacklight = 5;
+constexpr bool kBacklightOn = false;
+constexpr int kTouchCs = -1;
+constexpr int kButtonLeft = 0;
+constexpr int kButtonCenter = 1;
+constexpr int kButtonUp = 8;
+constexpr int kButtonRight = 9;
+constexpr int kButtonDown = 4;
 #else
 constexpr char kBoardLabel[] = "Dual C5 Touch";
 constexpr int kBacklight = 8;

@@ -31,6 +31,10 @@ jobs:
             define: AWOK_DUAL_C5_MINI
             label: "Dual C5 Mini"
             fqbn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled"
+          - variant: marauder-mini-v3
+            define: AWOK_MARAUDER_MINI_V3
+            label: "Marauder Mini v3"
+            fqbn: "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled"
           - variant: cardputer-v11
             define: AWOK_CARDPUTER_V11
             label: "M5Stack Cardputer v1.1"
