@@ -69,6 +69,7 @@ class AwokMiniDisplay : public Adafruit_GFX {
   void fillScreen(uint16_t) override {
     keyboardActive_ = false;
     dashboardActive_ = false;
+    directActive_ = false;
     memset(dashboardLines_, 0, sizeof(dashboardLines_));
     memset(keyboardPreview_, 0, sizeof(keyboardPreview_));
     layout.clear(); dirty_ = true;
@@ -85,17 +86,30 @@ class AwokMiniDisplay : public Adafruit_GFX {
   }
   void header(const char* title, const char* detail) {
     layout.header(title);
-    // Status stays readable through the first rows of the native document.
+#ifdef AWOK_CARDPUTER_V11
     if (*detail) {
       auto* item = layout.add(0, -1);
       if (item) strncpy(item->label, detail, MiniLayout::textBytes - 1);
     }
+#else
+    strncpy(detail_, detail, sizeof(detail_) - 1);
+    detail_[sizeof(detail_) - 1] = 0;
+#endif
     dirty_ = true;
   }
   void button(int x, int y, int w, int h, const char* label, uint16_t color) {
     layout.button(x, y, w, h, label, color); dirty_ = true;
   }
   void selectableRows(int count) { layout.rowCount = count; }
+  void gps(int state) { gpsState_ = state; dirty_ = true; }
+  void version(const char* text) { version_ = text; }
+  Adafruit_GFX* directCanvas() { return canvas_; }
+  void directBegin() {
+    directActive_ = true;
+    keyboardActive_ = dashboardActive_ = false;
+    if (canvas_) canvas_->fillScreen(ST7735_BLACK);
+    dirty_ = true;
+  }
   void bar(int y, const char* label, int value, int maximum) {
     auto* item = layout.add(0, y);
     if (item) {
@@ -163,6 +177,7 @@ class AwokMiniDisplay : public Adafruit_GFX {
     return -1;
   }
   bool selection(int& x, int& y) const {
+    if (directActive_) return false;
     if (dashboardActive_) {
       const int i = dashboardButton(dashboardFocus_);
       if (i < 0) return false;
@@ -179,6 +194,7 @@ class AwokMiniDisplay : public Adafruit_GFX {
 #endif
   }
   void navigate(int direction, bool jump = false) {
+    if (directActive_) return;
     if (dashboardActive_) {
       if (direction < 0 && dashboardFocus_ > 0) --dashboardFocus_;
       else if (direction > 0 && dashboardButton(dashboardFocus_ + 1) >= 0) ++dashboardFocus_;
@@ -249,6 +265,7 @@ class AwokMiniDisplay : public Adafruit_GFX {
   }
   void present(bool = true) {
     if (diagnostic_ || !canvas_ || (!dirty_ && !redraw_)) return;
+    if (directActive_) { blitCanvas(); dirty_ = redraw_ = false; return; }
     if (dashboardActive_) {
       if (dashboardButton(dashboardFocus_) < 0) dashboardFocus_ = 0;
       canvas_->fillScreen(ST7735_BLACK); canvas_->setTextSize(1);
@@ -287,7 +304,24 @@ class AwokMiniDisplay : public Adafruit_GFX {
     canvas_->setCursor(1, 2);
     char heading[MiniLayout::columns + 1] = {};
     strncpy(heading, layout.title, MiniLayout::columns); canvas_->print(heading);
+    {
+      const uint16_t gpsColor = gpsState_ >= 2 ? 0x07e0
+                                : gpsState_ == 1 ? 0xffe0 : 0x7bef;
+      canvas_->setTextColor(gpsColor);
+      canvas_->setCursor(MiniPixels::width - 27, 2); canvas_->print("GPS");
+      canvas_->fillCircle(MiniPixels::width - 4, 5, 2, gpsColor);
+    }
+#ifndef AWOK_CARDPUTER_V11
+    if (detail_[0]) {
+      char sub[MiniLayout::columns + 2] = {};
+      strncpy(sub, detail_, MiniLayout::columns + 1);
+      canvas_->setTextColor(0xc618);
+      canvas_->setCursor(1, 13); canvas_->print(sub);
+    }
+    canvas_->drawFastHLine(0, MiniLayout::bodyTop - 2, MiniPixels::width, ST7735_BLUE);
+#else
     canvas_->drawFastHLine(0, 12, MiniPixels::width, ST7735_BLUE);
+#endif
     for (int row = 0; row < MiniLayout::visible; ++row) {
       const int index = layout.top + row;
       if (index >= layout.lineCount) break;
@@ -324,9 +358,9 @@ class AwokMiniDisplay : public Adafruit_GFX {
       }
     }
     if (layout.lineCount > MiniLayout::visible) {
-      const int bodyHeight = MiniPixels::height - 29;
+      const int bodyHeight = (MiniPixels::height - 13) - MiniLayout::bodyTop;
       const int h = std::max(3, bodyHeight * MiniLayout::visible / layout.lineCount);
-      const int y = 15 + (bodyHeight - h) * layout.top /
+      const int y = MiniLayout::bodyTop + (bodyHeight - h) * layout.top /
           std::max(1, layout.lineCount - MiniLayout::visible);
       canvas_->fillRect(MiniPixels::width - 1, y, 1, h, ST7735_CYAN);
     }
@@ -338,12 +372,16 @@ class AwokMiniDisplay : public Adafruit_GFX {
     canvas_->print(layout.overflow ? "Content limit reached"
                                    : ";up ,left .down /right Enter ~:back");
 #else
-    canvas_->print(layout.overflow ? "Content limit reached" : "L:top R:acts C:select");
+    canvas_->print(layout.overflow ? "Content limit reached" : version_);
 #endif
     blitCanvas();
     dirty_ = redraw_ = false;
   }
   MiniLayout layout;
+  int gpsState_ = 0;
+  const char* version_ = "";
+  char detail_[48] = {};
+  bool directActive_ = false;
  private:
   void drawKeyboard() {
     canvas_->fillScreen(ST7735_BLACK);

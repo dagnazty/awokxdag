@@ -51,6 +51,7 @@ PROFILES = {
     "cardputer-v11": (CARDPUTER_V11_FQBN, "AWOK_CARDPUTER_V11"),
     "dual-c5-touch": (C5_FQBN, "AWOK_DUAL_C5_TOUCH"),
     "dual-c5-mini": (C5_FQBN, "AWOK_DUAL_C5_MINI"),
+    "marauder-mini-v3": (C5_FQBN, "AWOK_MARAUDER_MINI_V3"),
     "dual-esp32-touch-v1": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V1"),
     "dual-esp32-touch-v2": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V2"),
     "dual-esp32-touch-v3": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V3"),
