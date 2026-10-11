@@ -5,6 +5,49 @@ All notable changes to AxD are documented here. This project follows
 
 ## [Unreleased]
 
+## [1.7.8] - 2026-10-01
+
+### Fixed
+
+- Make the BLE Detail GATT Audit button label smaller. Bound GATT discovery to
+  16 services and 48 characteristics and add per-procedure timeouts. Prevent
+  the post-discovery C5 crash by pausing bridge control while the audit owns
+  BLE and deleting the GATT client before NimBLE deinitializes. Hardware
+  retest is pending.
+
+### Added
+
+- BLE GATT Audit on C5 screen boards: selected-device service and characteristic
+  inventory with explicit unauthenticated read probes that record status and
+  length but no values. The bounded latest audit exports to SD; previously bonded
+  peers are refused and no pairing or writes are initiated.
+- Experimental 4 MB classic ESP32 profiles for the resistive ESP32-2432S028R
+  CYD, HaleHound E32R28T, E32R35T, and NM-RF-Hat variants. Each has its own
+  release image, with separate TFT/SD buses, board-specific touch wiring, and
+  a full-screen scaled UI on the 3.5-inch panel. GPS-less Fleet rows use the
+  coordinator's fresh fix. Full hardware validation remains pending.
+- Map the ESP32-2432S028R portrait menu pixel for pixel onto the panel's native
+  320 × 240 address space, eliminating the cut-off bottom rows seen on hardware.
+  Turn the menu and touch together so taps follow the chosen portrait
+  orientation, confirmed on one physical CYD.
+- Apply that 2.8-inch portrait display and touch mapping to the HaleHound
+  E32R28T and NM-RF-Hat builds. Set the E32R35T's 320 × 480 ST7796 panel and
+  touch to matching portrait orientation, with display color inversion enabled.
+  These HaleHound configurations still require physical validation.
+- Experimental **NM-CYD-C5** profile with its 16 MB flash / 8 MB PSRAM build,
+  240 × 320 ST7789 display, shared-SPI XPT2046 touch and microSD, active-high
+  GPIO25 backlight, and optional 9600-baud LP-UART GPS on GPIO4/5. The build,
+  flash helper, release matrix, hardware map, and physical validation checklist
+  now recognize `nm-cyd-c5` without changing existing board profiles.
+- Camera scanning now checks registered Flock and Axon Wi-Fi OUIs, name/SSID
+  hints, and BLE manufacturer and service UUID evidence. Results show
+  confidence and remain suspected detections; sightings expire after 90 seconds.
+  A shorter active-scan response wait fits the BLE scan window.
+- Network Tools can save up to four Wi-Fi connections after successful joins
+  for later wardrive uploads. The connection screen has a Save ON/OFF choice,
+  and Saved Wi-Fi lets users rejoin or forget a network. Passwords are kept in
+  device NVS without NVS encryption; upload still requires an explicit tap.
+
 ## [1.7.7] - 2026-09-27
 
 ### Added
@@ -23,6 +66,14 @@ All notable changes to AxD are documented here. This project follows
 
 ### Changed
 
+- Wardrive checks Bloom-filter matches against its already allocated recent-MAC
+  table before treating a Wi-Fi or BLE sighting as a duplicate. This prevents
+  filter collisions from silently dropping new devices. The bounded table can
+  permit an old device to be logged again after eviction. Empty two-second SD
+  flushes are skipped; new rows still flush and shutdown still closes the CSV.
+  Board dashboards show Wi-Fi scan restarts and dropped BLE advertisements when
+  capture pressure occurs; the BLE handoff queue now uses atomic indices.
+  Radio scheduling, BLE scan participation, and transfer framing are unchanged.
 - Fleet Wardrive accepts Wi-Fi and BLE sightings from nodes without GPS,
   stamps them with the coordinator's fresh GPS fix, and retries them if that
   fix drops instead of writing unlocated rows. GPS-less boards no longer claim
@@ -1137,7 +1188,8 @@ All notable changes to AxD are documented here. This project follows
 - Touchscreen UI, SD capture manager, status screens, serial controls, build
   workflow, and recovery documentation.
 
-[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.7...HEAD
+[Unreleased]: https://github.com/dagnazty/awokxdag/compare/v1.7.8...HEAD
+[1.7.8]: https://github.com/dagnazty/awokxdag/compare/v1.7.7...v1.7.8
 [1.7.7]: https://github.com/dagnazty/awokxdag/compare/v1.7.6...v1.7.7
 [1.7.6]: https://github.com/dagnazty/awokxdag/compare/v1.7.5...v1.7.6
 [1.7.5]: https://github.com/dagnazty/awokxdag/compare/v1.7.4...v1.7.5

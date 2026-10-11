@@ -1,6 +1,9 @@
 // Arduino IDE selection.
 #if !defined(AWOK_DUAL_C5_TOUCH) && !defined(AWOK_DUAL_C5_MINI) && \
     !defined(AWOK_MARAUDER_MINI_V3) && \
+    !defined(AWOK_NM_CYD_C5) && \
+    !defined(AWOK_CYD_2432S028) && !defined(AWOK_HALEHOUND_E32R28T) && \
+    !defined(AWOK_HALEHOUND_E32R35T) && !defined(AWOK_HALEHOUND_NM_RF_HAT) && \
     !defined(AWOK_DUAL_C5_BRIDGE) && !defined(AWOK_LILYGO_T_DONGLE_C5_BRIDGE) && \
     !defined(AWOK_DUAL_ESP32_TOUCH_V1) && !defined(AWOK_DUAL_ESP32_TOUCH_V2) && \
     !defined(AWOK_DUAL_ESP32_TOUCH_V3) && \
@@ -13,6 +16,7 @@
     !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V2) && \
     !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V3) && !defined(AWOK_CARDPUTER_V11)
 //#define AWOK_DUAL_C5_TOUCH
+//#define AWOK_NM_CYD_C5
 #define AWOK_DUAL_C5_MINI
 //#define AWOK_DUAL_ESP32_TOUCH_V1
 //#define AWOK_DUAL_ESP32_TOUCH_V2
@@ -22,6 +26,7 @@
 //#define AWOK_DUAL_ESP32_MINI_V3
 #endif
 #include "awok_common.h"
+#include <atomic>
 
 // The Wi-Fi driver refuses to transmit raw management frames it deems
 // malformed, which includes deauthentication and disassociation frames.
@@ -50,9 +55,23 @@ struct AwokHeadlessTouch {
   TS_Point getPoint() { return TS_Point(0, 0, 0); }
 } touch;
 #else
+#ifdef AWOK_CLASSIC_CYD
+#include "cyd_touch.h"
+SPIClass cydDisplaySpi(HSPI);
+AwokTouchDisplay display(AwokPins::kDisplayDc, AwokPins::kDisplayCs,
+                         AwokPins::kDisplayReset, &cydDisplaySpi);
+#ifdef AWOK_ST7796_TOUCH
+AwokCydTouch touch(AwokPins::kTouchCs, AwokPins::kTouchSck,
+                   AwokPins::kTouchMiso, AwokPins::kTouchMosi, &cydDisplaySpi);
+#else
+AwokCydTouch touch(AwokPins::kTouchCs, AwokPins::kTouchSck,
+                   AwokPins::kTouchMiso, AwokPins::kTouchMosi, nullptr);
+#endif
+#else
 AwokTouchDisplay display(AwokPins::kDisplayDc, AwokPins::kDisplayCs,
                          AwokPins::kDisplayReset);
 XPT2046_Touchscreen touch(AwokPins::kTouchCs);
+#endif
 #endif
 
 #if defined(AWOK_MINI_DISPLAY) || defined(AWOK_HEADLESS)
@@ -242,13 +261,16 @@ uint32_t lastWardriveDrawMs = 0;
 bool wardriveCsvReady = false;
 String g_wardriveCsvPath;  // this run's CSV file (a new one is made each start)
 File g_wardriveFile;       // persistent open file handle during wardrive
-uint8_t wardriveBloom[kWardriveBloomFilterBytes] = {0};  // fast O(1) MAC deduplication bitset
-uint8_t wardriveMacs[kMaxWardriveMacs][6];
+uint8_t wardriveBloom[kWardriveBloomFilterBytes] = {0};  // fast negative check
+uint8_t wardriveMacs[kMaxWardriveMacs][6];  // exact recently added MACs
 int wardriveMacCount = 0;
+int wardriveMacCursor = 0;
 uint32_t wardriveBleCount = 0;
+uint32_t wardriveWifiScanRestarts = 0;
+std::atomic<uint32_t> wardriveBleQueueDrops{0};
 BleHit bleHitQueue[kBleHitQueueSlots];
-volatile int bleHitHead = 0;
-volatile int bleHitTail = 0;
+std::atomic<int> bleHitHead{0};
+std::atomic<int> bleHitTail{0};
 
 // Link Mode (ESP-NOW pairing + Split Wardrive). Cross-tab globals must be
 // defined here (Arduino auto-prototypes functions but not variables, and
@@ -1253,7 +1275,18 @@ void drawBleDetail() {
   const char* hint = (selectedBle.flipperLike ? "Flipper-like service" : "");
   display.print(*hint ? "Flipper-like UUID; identity unverified"
                       : "Passive advertisement metadata only.");
+#ifdef AWOK_GATT_AUDIT
+  if (selectedBle.connectable) {
+    display.fillRect(0, kFooterTop, kScreenWidth, kScreenHeight - kFooterTop,
+                     kBackground);
+    drawButton(4, 284, 112, 30, "Back", kMuted);
+    drawSmallButton(124, 284, 112, 30, "GATT Audit", kAccent);
+  } else {
+    drawFooter("Back", "Rescan");
+  }
+#else
   drawFooter("Back", "Rescan");
+#endif
 }
 
 int accessPointsOnChannel(int channel) {
@@ -2130,7 +2163,12 @@ void showRadioError(const char* message) {
 bool ensureWifiStation(bool releaseBle) {
   // Wi-Fi-only tools free the BLE controller to leave more runtime headroom.
   // Dual-radio views pass releaseBle=false to keep BLE up alongside Wi-Fi.
-  if (releaseBle) releaseBleMemory();
+  if (releaseBle) {
+    releaseBleMemory();
+#ifdef AWOK_GATT_AUDIT
+    if (gattAuditActive()) return false;  // disconnect could not finish safely
+#endif
+  }
   if (WiFi.getMode() == WIFI_STA) return true;
   logMemory("before Wi-Fi init");
   // A failed esp_wifi_init logs 0x3001 on its deinit cleanup (driver never
@@ -2178,6 +2216,14 @@ void releaseBleMemory() {
   // (enforced in awok_common.h) cleans up the scan timer BEFORE port teardown;
   // 2.5.0 instead dereferenced the freed NPL function table in ~NimBLEScan.
   if (!NimBLEDevice::isInitialized()) return;
+#ifdef AWOK_GATT_AUDIT
+  // NimBLEClient owns a host callout. Delete it while the host is alive;
+  // deinit(true) would otherwise destroy it after nimble_port_deinit().
+  if (gattAuditActive()) {
+    if (!stopGattAuditForRadio()) return;
+    Serial.println("[gatt] audit closed for radio switch");
+  }
+#endif
   NimBLEScan* scan = NimBLEDevice::getScan();
   if (scan) {
     scan->stop();
@@ -2569,10 +2615,21 @@ void initializeDisplayAndTouch() {
   digitalWrite(AwokPins::kDisplayCs, HIGH);
   digitalWrite(AwokPins::kTouchCs, HIGH);
   digitalWrite(AwokPins::kSdCs, HIGH);
+#ifdef AWOK_CLASSIC_CYD
+  SPI.begin(AwokPins::kSpiSck, AwokPins::kSpiMiso, AwokPins::kSpiMosi, -1);
+  cydDisplaySpi.begin(AwokPins::kDisplaySpiSck, AwokPins::kDisplaySpiMiso,
+                      AwokPins::kDisplaySpiMosi, -1);
+  touch.begin();
+#else
   touch.begin();
   SPI.end();
   SPI.begin(AwokPins::kSpiSck, AwokPins::kSpiMiso, AwokPins::kSpiMosi, -1);
+#endif
+#ifdef AWOK_CYD_NATIVE_320X240
+  touch.setRotation(3);
+#else
   touch.setRotation(0);
+#endif
   pinMode(AwokPins::kBacklight, OUTPUT);
   digitalWrite(AwokPins::kBacklight, AwokPins::kBacklightOn ? HIGH : LOW);
   display.begin(27000000);

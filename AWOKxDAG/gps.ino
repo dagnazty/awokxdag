@@ -419,10 +419,15 @@ bool wardriveMacSeen(const uint8_t* mac) {
   const uint32_t b2 = (h1 + h2) % kWardriveBloomBits;
   const uint32_t b3 = (h1 + 2 * h2) % kWardriveBloomBits;
   const uint32_t b4 = (h1 + 3 * h2) % kWardriveBloomBits;
-  return (wardriveBloom[b1 >> 3] & (1 << (b1 & 7))) &&
-         (wardriveBloom[b2 >> 3] & (1 << (b2 & 7))) &&
-         (wardriveBloom[b3 >> 3] & (1 << (b3 & 7))) &&
-         (wardriveBloom[b4 >> 3] & (1 << (b4 & 7)));
+  if (!(wardriveBloom[b1 >> 3] & (1 << (b1 & 7))) ||
+      !(wardriveBloom[b2 >> 3] & (1 << (b2 & 7))) ||
+      !(wardriveBloom[b3 >> 3] & (1 << (b3 & 7))) ||
+      !(wardriveBloom[b4 >> 3] & (1 << (b4 & 7)))) return false;
+  // A Bloom hit can be a collision, particularly in long sessions. Confirm
+  // against the already allocated exact-MAC table before dropping a sighting.
+  for (int i = 0; i < wardriveMacCount; ++i)
+    if (memcmp(wardriveMacs[i], mac, 6) == 0) return true;
+  return false;
 }
 
 void wardriveAddMac(const uint8_t* mac) {
@@ -436,12 +441,20 @@ void wardriveAddMac(const uint8_t* mac) {
   wardriveBloom[b2 >> 3] |= (1 << (b2 & 7));
   wardriveBloom[b3 >> 3] |= (1 << (b3 & 7));
   wardriveBloom[b4 >> 3] |= (1 << (b4 & 7));
-  ++wardriveMacCount;
+  if (wardriveMacCount < kMaxWardriveMacs) {
+    memcpy(wardriveMacs[wardriveMacCount++], mac, 6);
+  } else {
+    // Keep recently added MACs exact. An evicted MAC may be logged again, but a
+    // new MAC is never silently rejected because the Bloom filter filled up.
+    memcpy(wardriveMacs[wardriveMacCursor], mac, 6);
+    wardriveMacCursor = (wardriveMacCursor + 1) % kMaxWardriveMacs;
+  }
 }
 
 void wardriveResetDedup() {
   memset(wardriveBloom, 0, sizeof(wardriveBloom));
   wardriveMacCount = 0;
+  wardriveMacCursor = 0;
 }
 
 // Open a FRESH CSV for this wardrive run: /awokxdag/wardrive-NNNN.csv, using the
@@ -506,7 +519,10 @@ void closeWardriveCsv() {
 }
 
 void flushWardriveCsv() {
-  if (wardriveCsvReady && g_wardriveFile) {
+  // The header is flushed when the file opens. Avoid touching the SD card on
+  // every timer tick when no new observation has been written.
+  if (wardriveCsvReady && g_wardriveFile &&
+      wardriveStats.rows != wardriveStats.flushedRows) {
     g_wardriveFile.flush();
     if (g_wardriveFile.getWriteError()) { wardriveStats.writeError = true; wardriveCsvReady = false; }
     else {
@@ -648,7 +664,10 @@ class WardriveBleCallbacks : public NimBLEScanCallbacks {
  public:
   void onResult(const NimBLEAdvertisedDevice* device) override {
     const int next = (bleHitHead + 1) % kBleHitQueueSlots;
-    if (next == bleHitTail) return;  // queue full: drop
+    if (next == bleHitTail) {
+      wardriveBleQueueDrops.fetch_add(1, std::memory_order_relaxed);
+      return;
+    }
     BleHit& hit = bleHitQueue[bleHitHead];
     strncpy(hit.addr, device->getAddress().toString().c_str(),
             sizeof(hit.addr) - 1);
@@ -870,7 +889,14 @@ void drawWardriveDashboardBody(const String& context) {
            (unsigned long)wardriveStats.rows, (unsigned long)(wardriveStats.bytes / 1024));
   display.dashboardLine(6, line, statusColor);
   snprintf(line, sizeof(line), wardriveStats.didFlush ? "Flushed %lus ago" : "No flush yet", (unsigned long)flushAge);
-  display.dashboardLine(7, storage == 4 || wardriveStats.mode == 1 ? context.c_str() : line, kMuted);
+  const uint32_t bleDrops = wardriveBleQueueDrops.load(std::memory_order_relaxed);
+  if ((wardriveActive || linkWardriveActive) && (wardriveWifiScanRestarts || bleDrops)) {
+    snprintf(line, sizeof(line), "Retry %lu Drop %lu",
+             (unsigned long)wardriveWifiScanRestarts, (unsigned long)bleDrops);
+    display.dashboardLine(7, line, kWarn);
+  } else {
+    display.dashboardLine(7, storage == 4 || wardriveStats.mode == 1 ? context.c_str() : line, kMuted);
+  }
   display.dashboardLine(8, storage == 4 ? "Worker: no local CSV" : wardriveCsvName().c_str(), kMuted);
 #else
   display.setTextSize(1); display.setTextColor(statusColor, kBackground);
@@ -904,7 +930,15 @@ void drawWardriveDashboardBody(const String& context) {
   else display.print("Waiting for first flush");
   display.setCursor(12, 243);
   display.print(storage == 4 ? "Worker: no local CSV" : clipped(wardriveCsvName(), 35));
-  display.setTextColor(kMuted, kBackground); display.setCursor(6, 266); display.print(clipped(context, 37));
+  const uint32_t bleDrops = wardriveBleQueueDrops.load(std::memory_order_relaxed);
+  const bool captureWarning = (wardriveActive || linkWardriveActive) &&
+                              (wardriveWifiScanRestarts || bleDrops);
+  display.setTextColor(captureWarning ? kWarn : kMuted, kBackground);
+  display.setCursor(6, 266);
+  if (captureWarning)
+    display.printf("Wi-Fi retries %lu | BLE drops %lu",
+                   (unsigned long)wardriveWifiScanRestarts, (unsigned long)bleDrops);
+  else display.print(clipped(context, 37));
 #endif
 }
 
@@ -928,10 +962,12 @@ static void wardriveEnterWifi() {
 static void wardriveExitWifi() { WiFi.scanDelete(); }
 
 void startWardrive() {
-  stopActiveTools();  // release the previous tool before bringing up both radios
+  if (!stopActiveTools()) return;  // release the previous tool before both radios
   wardriveNetworks = 0;
   wardriveBleCount = 0;
   wardriveScans = 0;
+  wardriveWifiScanRestarts = 0;
+  wardriveBleQueueDrops.store(0, std::memory_order_relaxed);
   wardriveResetDedup();
   bleHitHead = 0;
   bleHitTail = 0;
@@ -1030,6 +1066,7 @@ void updateWardrive() {
       WiFi.scanNetworks(true, true, false, 120);
     } else {
       // not started / failed: kick off a scan
+      ++wardriveWifiScanRestarts;
       WiFi.scanNetworks(true, true, false, 120);
     }
   }

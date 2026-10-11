@@ -55,7 +55,8 @@ pairing) before changing modes; it never silently replaces one. A stopped
 Split pair must be unpaired before starting a Fleet.
 
 - Exactly one member is dedicated to BLE scanning.
-- Classic v1-v3 Touch/Mini WROOM workers own and evenly split 2.4 GHz.
+- Classic v1-v3 Touch/Mini WROOM workers and classic CYD/HaleHound workers own
+  and evenly split 2.4 GHz.
 - When classic workers are present, C5 Wi-Fi workers own and evenly split 5 GHz.
 - In an all-C5 fleet, the Wi-Fi workers evenly split the full dual-band plan.
 - Band pools use independent modulo slices, so no two Wi-Fi workers receive the

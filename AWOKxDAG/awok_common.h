@@ -30,6 +30,8 @@
 #include <DNSServer.h>
 #include <string>
 #include "network_parse.h"
+#include "camera_signatures.h"
+#include "saved_wifi.h"
 #include <WiFiUdp.h>
 #include <NetworkClientSecure.h>
 #include <lwip/sockets.h>
@@ -130,7 +132,7 @@ constexpr uint8_t kDeauthHopChannels[] = {
 constexpr int kDeauthHopChannelCount =
     static_cast<int>(sizeof(kDeauthHopChannels) / sizeof(kDeauthHopChannels[0]));
 constexpr int kMaxDeauthTargets = 8;
-constexpr char kVersion[] = "1.7.7";
+constexpr char kVersion[] = "1.7.8";
 constexpr char kAuthor[] = "dag nazty";
 constexpr uint32_t kHandshakeRedrawMs = 500;
 constexpr uint32_t kHandshakePulseMs = 2000;
@@ -472,6 +474,7 @@ enum class View {
   kChannels,
   kBle,
   kBleDetail,
+  kBleGattAudit,
   kSaved,
   kWifiAudit,
   kWifiMonitor,
@@ -512,6 +515,7 @@ enum class View {
   kNetworkSetup,
   kNetworkEdit,
   kNetworkAps,
+  kNetworkSaved,
   kNetworkResults,
   kNetworkHost,
   kNetworkDetail,
@@ -597,10 +601,12 @@ struct CameraEntry {
   String label;   // SSID or BLE name
   String mac;     // BSSID or BLE address
   String vendor;  // matched vendor
-  String reason;  // why it flagged (OUI / SSID / BLE)
+  String reason;  // strongest visible evidence
+  uint16_t evidence = 0;
   int32_t rssi = -127;
   int16_t channel = 0;  // 0 for BLE
   bool ble = false;
+  uint32_t lastSeenMs = 0;
 };
 
 // POD observation handed from the Wi-Fi task to the camera-scan loop.
@@ -610,6 +616,17 @@ struct CameraHit {
   uint8_t channel;
   uint8_t nameLen;
   char name[33];
+};
+
+// BLE observation retains manufacturer and exact service clues for the
+// Cameras view; the wardrive BleHit intentionally carries less data.
+struct CameraBleHit {
+  char addr[18];
+  char name[24];
+  int8_t rssi;
+  uint8_t ravenMask;
+  bool xuntong;
+  bool publicAddress;
 };
 
 // One WPS-capable AP found by the WPS scan (POD handed from the Wi-Fi task to
@@ -911,6 +928,18 @@ struct BleEntry {
   bool flipperLike = false;
 };
 
+#ifdef AWOK_GATT_AUDIT
+struct GattAuditRow {
+  char service[37] = {0};
+  char characteristic[37] = {0};
+  uint16_t handle = 0;
+  uint16_t readBytes = 0;
+  uint32_t readAtMs = 0;
+  int readStatus = -1;  // -1 not attempted, -2 timeout, -3 link became encrypted
+  uint8_t properties = 0;  // read, write, write-no-response, notify, indicate
+};
+#endif
+
 // Declarations so feature tabs can use the short forms. Definitions that take
 // default arguments omit those defaults in the .ino body.
 void copyMac(uint8_t* dest, const volatile uint8_t* src);
@@ -923,6 +952,15 @@ void drawHeader(const String& title, const String& detail = "");
 void logMemory(const char* stage);
 void showRadioError(const char* message);
 void shutdownWifi();
+bool stopActiveTools();
+#ifdef AWOK_GATT_AUDIT
+void startGattAudit();
+void drawGattAudit();
+void handleGattTouch(int x, int y);
+bool gattAuditActive();
+bool stopGattAuditForRadio();
+bool closeGattAudit();
+#endif
 bool ensureWifiStation(bool releaseBle = true);
 bool ensureBleReady(bool needsWifi);
 void releaseBleMemory();

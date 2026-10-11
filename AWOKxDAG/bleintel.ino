@@ -337,7 +337,7 @@ void drawBleIntel() {
 }
 
 void startBleIntel() {
-  stopActiveTools();
+  if (!stopActiveTools()) return;
   if (!ensureBleReady(false)) return;
   if (!bleIntelEntries.allocate() || !bleIntelHitQueue.begin()) {
     bleIntelHitQueue.release();

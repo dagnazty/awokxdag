@@ -441,7 +441,7 @@ void drawDeauthForensics() {
 }
 
 void startDeauthForensics() {
-  stopActiveTools();
+  if (!stopActiveTools()) return;
   if (!ensureWifiStation(true)) return;
   if (!deauthEvents.allocate() || !deauthApSeqs.allocate() || !deauthQueue.begin()) {
     deauthQueue.release();

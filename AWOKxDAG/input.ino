@@ -35,12 +35,22 @@ bool readTouch(int& screenX, int& screenY) {
   if (!touch.touched()) return false;
   TS_Point point = touch.getPoint();
   if (point.z < AwokTouchCalibration::kPressureMin) return false;
+#ifdef AWOK_CYD_NATIVE_320X240
+  // Match the 2.8-inch boards' portrait menu turn on the 320x240 panel.
+  screenX = constrain(map(point.y, AwokTouchCalibration::kYMin,
+                          AwokTouchCalibration::kYMax, 0, kScreenWidth - 1),
+                      0, kScreenWidth - 1);
+  screenY = constrain(map(point.x, AwokTouchCalibration::kXMin,
+                          AwokTouchCalibration::kXMax, kScreenHeight - 1, 0),
+                      0, kScreenHeight - 1);
+#else
   screenX = constrain(map(point.x, AwokTouchCalibration::kXMin,
                           AwokTouchCalibration::kXMax, 0, kScreenWidth - 1),
                       0, kScreenWidth - 1);
   screenY = constrain(map(point.y, AwokTouchCalibration::kYMin,
                           AwokTouchCalibration::kYMax, 0, kScreenHeight - 1),
                       0, kScreenHeight - 1);
+#endif
   return true;
 #endif
 }
@@ -714,10 +724,21 @@ void dispatchTouch(int x, int y) {
     if (x < kScreenWidth / 2) {
       drawBleResults();
     } else {
+#ifdef AWOK_GATT_AUDIT
+      if (selectedBle.connectable) startGattAudit();
+      else scanBle();
+#else
       scanBle();
+#endif
     }
     return;
   }
+#ifdef AWOK_GATT_AUDIT
+  if (currentView == View::kBleGattAudit) {
+    handleGattTouch(x, y);
+    return;
+  }
+#endif
   if (currentView == View::kWifiAudit) {
     if (x < 48) {
       if (auditReturnView == View::kSaved) {
@@ -822,6 +843,9 @@ void handleCardputerEscape() {
 #endif
 
 bool toolBlocksSerialShortcuts() {
+#ifdef AWOK_GATT_AUDIT
+  if (gattAuditActive()) return true;
+#endif
   return deauthAttackActive || deauthMonitorActive || handshakeCaptureActive ||
          clientSnifferActive || beaconFloodActive || evilPortalActive ||
          wardriveActive || pktmonActive || wpsScanActive || rogueWatchActive ||
@@ -834,7 +858,10 @@ bool toolBlocksSerialShortcuts() {
          linkState == kLinkDiscovering || linkState == kLinkAwaitConfirm;
 }
 
-void stopActiveTools() {
+bool stopActiveTools() {
+#ifdef AWOK_GATT_AUDIT
+  if (gattAuditActive() && !closeGattAudit()) return false;
+#endif
   stopWifiScanContinuous();
   if (deauthAttackActive) stopDeauthAttack();
   if (deauthMonitorActive) stopDeauthMonitor();
@@ -869,6 +896,7 @@ void stopActiveTools() {
   if (linkState == kLinkDiscovering || linkState == kLinkAwaitConfirm) {
     linkCancelPairing();
   }
+  return true;
 }
 
 void handleSerial() {
@@ -893,8 +921,10 @@ void handleSerial() {
   const char command = static_cast<char>(tolower(Serial.read()));
   if (toolBlocksSerialShortcuts()) {
     if (command == 'h') {
-      stopActiveTools();
-      drawHome();
+      if (stopActiveTools()) drawHome();
+#ifdef AWOK_GATT_AUDIT
+      else drawGattAudit();
+#endif
     }
     return;
   }

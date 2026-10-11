@@ -1,11 +1,11 @@
 # AxD
 
-**Dual-band Wi-Fi / BLE penetration-testing toolkit for the ESP32-C5** (AWOK Dual
-C5, white-USB screen board with an ILI9341 touchscreen).
+**Dual-band Wi-Fi / BLE penetration-testing toolkit for the ESP32-C5**, with
+profiles for AWOK Dual C5 and NM-CYD-C5 touchscreen hardware.
 
-- **Version:** 1.7.7
+- **Version:** 1.7.8
 - **Author:** dag nazty
-- **Target:** ESP32-C5 Dev Module, 8 MB flash, PSRAM, microSD
+- **Targets:** ESP32-C5, classic ESP32, and ESP32-S3 boards listed below
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 
 Experimental **original Dual ESP32 Touch v1/v2/v3** profiles are also available (2.4 GHz only).
@@ -21,6 +21,17 @@ An experimental **LILYGO T-Dongle-C5** profile adds the BLE phone bridge for
 the Cardputer. Its screen shows the AxD logo plus BLE and SD status. The 16 MB
 flash and PSRAM are configured in the release build;
 see the [T-Dongle-C5 bridge notes](docs/t-dongle-c5-bridge.md).
+
+An experimental **NM-CYD-C5** profile uses its 2.8-inch ST7789 display,
+XPT2046 touchscreen, 16 MB flash, 8 MB PSRAM, onboard microSD slot, and optional
+LP-UART GPS header. See the [NM-CYD-C5 port notes](docs/nm-cyd-c5.md).
+
+Experimental classic ESP32 builds now cover the resistive **ESP32-2432S028R
+CYD**, **HaleHound E32R28T**, **E32R35T**, and **NM-RF-Hat** board variants.
+These use their onboard screen, touch, and microSD; the GPS-less profiles can
+contribute Fleet Wardrive rows stamped with the coordinator's fresh GPS fix.
+See the [CYD and HaleHound port notes](docs/cyd-halehound-port.md) for build
+targets and physical validation status.
 
 > ## Authorized use only
 > This firmware transmits and disrupts networks (deauthentication, beacon
@@ -50,6 +61,16 @@ see the [T-Dongle-C5 bridge notes](docs/t-dongle-c5-bridge.md).
   interactive Web Bluetooth canvas waterfall.
 - **BLE Scan** — up to 64 advertisers with Prev/Next paging and tap-to-inspect detail (address
   type, TX power, connectable/scannable, manufacturer data, service UUIDs).
+- **BLE GATT Audit (C5 screen boards)** — select a connectable BLE scan result,
+  then tap **GATT Audit** to inventory up to 16 services and 48 characteristics. Tap a
+  readable characteristic to issue one unauthenticated ATT read request; the
+  device shows the response status and byte count without displaying or saving
+  its value. A previously bonded device is refused so the result cannot be
+  mistaken for an unpaired read. Export the latest inventory to SD as
+  `ble_gatt_audit.csv`. The read probe does not write characteristics or initiate
+  pairing. Discovery and read probes require a connection and are not passive.
+  Bridge remote control pauses while the audit owns the BLE radio and resumes
+  after Back closes the client.
   Advertised Flipper service UUIDs get an **[F?]** hint and CSV identification field;
   the hint does not verify device identity.
 - **Clients** — probe-request / station sniffer: client MACs, probed SSIDs,
@@ -59,10 +80,13 @@ see the [T-Dongle-C5 bridge notes](docs/t-dongle-c5-bridge.md).
 - **WPS Scan** — lists APs advertising WPS and whether setup is locked.
 - **Hidden SSID** — reveals hidden network names from probe-response /
   association frames, with an optional deauth pulse.
-- **Cameras** — continuous scanner that flags common surveillance cameras
-  (Ring, Blink, Wyze, Nest, Arlo, Reolink, Eufy, Tapo, Hikvision, Dahua...) by
-  vendor OUI (beaconing APs *and* connected clients), SSID/BLE name, and BLE
-  manufacturer id.
+- **Cameras** — continuous Wi-Fi capture and BLE scan for suspected
+  surveillance devices. Checks the registered Flock Safety and Axon OUIs,
+  Flock-format SSIDs and BLE names, XUNTONG manufacturer ID `0x09C8`, and exact
+  Raven BLE service UUIDs, alongside the existing camera-vendor OUI and name
+  heuristics. Each result shows LOW / MED / HIGH evidence strength; **all are
+  suspected devices**, since a vendor prefix, advertised name, or service UUID
+  does not prove that a camera is present. See [signature notes](docs/camera-signatures.md).
 - **Security Audit** — passive beacon-IE posture report: parses each AP's RSN /
   WPA / WPS information elements and classifies it by encryption tier (Open /
   WEP / WPA / WPA2 / WPA2-TKIP / WPA2-WPA3 / WPA3 / OWE / Enterprise), 802.11w
@@ -238,14 +262,21 @@ page; an already stopped detector shows **Back**. **Groups** returns to the pick
   `uptime+` markers. The bundled map is approximate near timezone borders;
   [data sources and update instructions](third_party/timezones/README.md) describe
   its limits. Existing files are not rewritten.
-- **Wardrive** — logs each Wi-Fi BSSID and BLE device once to a WiGLE-compatible
-  CSV while moving. A GPS-fix indicator sits in the header on every screen, and
+- **Wardrive** — logs discovered Wi-Fi BSSIDs and BLE devices to a WiGLE-compatible
+  CSV while moving. An exact cache of recently added addresses confirms
+  Bloom-filter matches, so collisions cannot silently discard a new device. After that bounded
+  cache fills, an old address may be logged again if it is seen much later.
+  The board shows Wi-Fi scan restarts and BLE queue drops during capture, so
+  a crowded route can reveal when observations are being missed.
+  A GPS-fix indicator sits in the header on every screen, and
   scan/deauth/client/portal/handshake logs are geotagged with the current fix.
   Touch, Mini, and website dashboards show device Wi-Fi/BLE counts, elapsed
   time, estimated distance, recent discovery rate, GPS quality/fix coverage, local
   time, and SD row/byte/flush status. The website marks stale telemetry and keeps
   device session totals separate from its best-effort live CSV rows. Fleet
   workers identify the coordinator as the owner of the merged CSV.
+  Planned coverage, GPS-gap, website counter, and long-session improvements are
+  tracked in [Wardriving improvements](docs/wardrive-improvement-plan.md).
 
 ### Link (two-unit)
 - **Link Mode** — pairs two AxD units (any mix of C5 and original 2.4 GHz
@@ -305,6 +336,14 @@ page; an already stopped detector shows **Back**. **Groups** returns to the pick
   **WiGLE** or **WDGWars**, and explicitly press Upload. Put the relevant API
   credentials in one `wardrive_upload.txt` file on the SD card (root or
   `/awokxdag/`) before opening the page:
+
+  Network Tools can remember up to four Wi-Fi connections after a successful
+  join. **Save: ON/OFF** on the connection page controls whether that join is
+  remembered. Open **Saved Wi-Fi** to join again without typing the password,
+  or to forget a connection. Passwords are stored in device NVS; this firmware
+  does not enable NVS encryption, so anyone with physical flash access may be
+  able to recover them. Use **Save: OFF** for a one-time connection. This is
+  separate from the scanner's saved AP list, which contains no passwords.
 
   ```ini
   wigle_api_name=YOUR_WIGLE_API_NAME
@@ -394,6 +433,7 @@ works without a card, and readable snapshots mirror to:
 | `saved_networks.csv` | saved AP list |
 | `latest_wifi_scan.csv` | last Wi-Fi scan |
 | `latest_ble_scan.csv` | last BLE scan |
+| `ble_gatt_audit.csv` | Last selected-device GATT inventory and read probe outcomes |
 | `latest_wifi_signal.csv` | signal monitor |
 | `latest_lan_hosts.csv` | Last LAN host scan, including partial-scan status |
 | `latest_network_services.csv` | Last ports/camera/printer/SIP/UPnP scan |
@@ -435,9 +475,13 @@ segment.
    `-Wl,--wrap=esp_wifi_init -Wl,--wrap=esp_bt_controller_init`. Without muldefs the sketch's
    `ieee80211_raw_frame_sanity_check` collides with Espressif's copy in
    `libnet80211.a`. The wrap shrinks Arduino's default STA RX/TX buffers so
-   Dual C5 Touch can keep BLE up beside Wi-Fi.
-2. Libraries: **Adafruit GFX**, **Adafruit ILI9341**, **NimBLE-Arduino 2.5.1 or newer**,
-   **XPT2046_Touchscreen**, **TinyGPSPlus**.
+   Dual C5 Touch can keep BLE up beside Wi-Fi. For classic ESP32 or Cardputer
+   IDE builds, run `python3 scripts/setup_arduino_ide.py --classic` first to
+   trim the unused BLE client role; rerun without `--classic` before a C5
+   screen build. The board-specific build script selects these flags itself.
+2. Libraries: **Adafruit GFX**, **Adafruit ILI9341**, **Adafruit ST7735 and
+   ST7789**, **NimBLE-Arduino 2.5.1 or newer**, **XPT2046_Touchscreen**,
+   **TinyGPSPlus**.
    NimBLE 2.5.0 can crash when stopping wardriving or another BLE tool because
    it destroys the scan-response timer after host teardown. Update it through
    Library Manager, or run `arduino-cli lib install "NimBLE-Arduino@2.5.1"`.
@@ -525,6 +569,34 @@ selects, right jumps to actions, and left returns to the top of the screen. At
 boot it shows the same AWOK logo as the Touch board, downscaled to 96 × 128 by
 `scripts/gen_mini_boot.py` (re-run with `--threshold` to retune the 1-bit art).
 Use `dual-c5-touch` with the same script to package the default Touch build.
+
+### NM-CYD-C5 (experimental)
+
+Install the same Touch dependencies plus **Adafruit ST7735 and ST7789**, then
+build or flash the dedicated 16 MB profile:
+
+```bash
+python3 scripts/build_firmware.py nm-cyd-c5
+python3 scripts/flash_firmware.py nm-cyd-c5 --port /dev/ttyUSB0
+```
+
+The packaged merged image is written under `build/nm-cyd-c5-<version>/`.
+This profile uses the onboard 240 × 320 ST7789, XPT2046, microSD slot, and the
+P5 LP-UART GPS header. It is compile-tested but remains experimental until the
+display orientation, colors, touch corners, SD, GPS, and radio lifecycle pass
+on physical hardware. See the [port notes](docs/nm-cyd-c5.md).
+
+### Classic CYD and HaleHound boards (experimental)
+
+Build one of `cyd-2432s028`, `halehound-e32r28t`,
+`halehound-e32r35t`, or `halehound-nm-rf-hat` using
+`python3 scripts/build_firmware.py <target>`. Each target produces a separate
+4 MB classic ESP32 release image. The 3.5-inch E32R35T build scales the touch
+UI to its full screen. The 2.8-inch HaleHound targets use the CYD's final
+portrait display/touch mapping; the E32R35T uses its ST7796 in portrait with
+display color inversion and matching touch coordinates. These HaleHound
+configurations still need physical verification. See
+[pin maps and validation steps](docs/cyd-halehound-port.md).
 
 ### M5Stack Cardputer v1.1 (experimental)
 
@@ -615,6 +687,21 @@ with `AWOK_DUAL_C5_MINI` (via `scripts/build_firmware.py dual-c5-mini`). This
 mapping was recovered from the bundled Mini firmware (see the comments in
 `board_pins.h`) and is confirmed working on hardware.
 
+## Hardware map (NM-CYD-C5)
+
+| Function | GPIO |
+| --- | ---: |
+| Shared SPI SCK / MISO / MOSI | 6 / 2 / 7 |
+| ST7789 CS / DC / Reset | 23 / 24 / (none) |
+| Backlight | 25 (active high) |
+| XPT2046 touch CS | 1 |
+| SD card CS | 10 |
+| Optional GPS UART1 RX / TX | 4 / 5 @ 9600 NMEA |
+| Battery ADC | disabled; GPIO 6 is the SPI clock |
+
+The build profile is `AWOK_NM_CYD_C5`; its packaging name is `nm-cyd-c5`.
+GPIO 16–20 and 22 are reserved by onboard flash/PSRAM and are not used.
+
 ## Hardware map (original ESP32 Touch v1/v2/v3)
 
 | Function | GPIO |
@@ -688,7 +775,7 @@ Single Arduino sketch split into feature tabs (one translation unit):
 `securityaudit`, `settings`, `screentest`, `tracker`, `harvester`, `probeintel`, `karmawatch`,
 `beaconwatch`, `authflood`, `advancedwatch`, `locator`, `link` (Link Mode +
 Split Wardrive; [docs/link-mode.md](docs/link-mode.md)), `auditlog`, `status`,
-`files`, `input`, `networktools`. `network_parse.h` contains bounded
+`files`, `input`, `networktools`, `gattaudit` (C5 screen only). `network_parse.h` contains bounded
 network-response parsers shared with the host tests in `tests/host/` (run
 `bash tests/host/run.sh`).
 
@@ -723,6 +810,11 @@ without it. Thanks to:
 - **[FZEasyMarauderFlash](https://github.com/SkeletonMan03/FZEasyMarauderFlash)**
   by **SkeletonMan03** — flashing reference used for the original Mini pin
   sourcing.
+- **[RockBase IoT NM-CYD-C5](https://github.com/RockBase-iot/NM-CYD-C5)** —
+  official board specifications and display, touch, SD, backlight, and LP-UART
+  pin mapping used by the NM-CYD-C5 profile. **[CYM](https://github.com/JimGat/CYM)**
+  by **JimGat** provided an independent working-hardware reference for the
+  shared SPI topology, ST7789 inversion/BGR requirements, and touch orientation.
 - **[Piglet](https://github.com/Hamspiced/piglet)** by **Hamspiced** — the
   coordinator/node ESP-NOW reference for Fleet Wardrive. Piglet's Core/Node
   model informed AxD's explicit Start/Join roles, coordinator pinning, worker

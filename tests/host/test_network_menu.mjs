@@ -85,6 +85,18 @@ test('connection progress has one explicit Cancel; success/timeout and invalid c
   t.c.expired=false;t.c.netPassword='secretpass';t.c.netJoin();t.c.handleNetworkSetupTouch(120,240);
   assert.equal(t.c.netJob,'None');assert.equal(t.c.netStatus,'Disconnected');
 });
+test('saved Wi-Fi controls opt in, open the list, and save only after a matching successful join',()=>{
+  const t=harness();t.c.drawNetworkSetup();
+  t.c.handleNetworkSetupTouch(50,265);assert.equal(t.c.netSaveOnJoin,false);
+  t.c.handleNetworkSetupTouch(170,265);assert.equal(t.c.currentView,'kNetworkSaved');
+  t.c.drawNetworkSetup();t.c.netPassword='secretpass';t.c.connected=false;t.c.netJoin();
+  t.c.connected=true;t.c.ssid='Other';t.c.updateJoin();assert.equal(t.c.netJob,'Join');
+  t.c.ssid='Lab';t.c.updateJoin();assert.equal(t.c.netJob,'None');
+  assert.equal(t.calls.filter(c=>c[0]==='rememberWifi').length,0);
+  t.c.netSaveOnJoin=true;t.c.connected=false;t.c.netPassword='secretpass';t.c.netJoin();
+  t.c.connected=true;t.c.updateJoin();
+  assert.equal(t.calls.filter(c=>c[0]==='rememberWifi').length,1);
+});
 test('stale host/result indices and upload memory release cannot dereference cleared tables',()=>{
   const t=harness();t.hosts();t.results();t.c.netSelectedHost=50;t.c.drawNetworkHost();assert.equal(t.c.currentView,'kNetworkResults');
   t.c.netSelectedResult=50;t.c.drawNetworkDetail();assert.equal(t.c.currentView,'kNetworkResults');

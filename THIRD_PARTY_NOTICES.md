@@ -1,5 +1,17 @@
 # Third-party references and notices
 
+## NM-CYD-C5 hardware references — RockBase IoT and CYM
+
+The `AWOK_NM_CYD_C5` profile uses factual board-interface information from the
+official [RockBase IoT NM-CYD-C5 repository](https://github.com/RockBase-iot/NM-CYD-C5):
+ESP32-C5 memory configuration and the ST7789, XPT2046, SD, backlight, and
+LP-UART pin map. [CYM](https://github.com/JimGat/CYM) by **JimGat** was also
+consulted as an independent working-hardware reference for the shared SPI bus,
+panel color/inversion configuration, and native portrait touch orientation.
+
+AxD's display wrapper, board profile, build integration, UI, and feature code
+are its own implementation; source bodies from either project were not copied.
+
 ## Piglet — Hamspiced
 
 Fleet Wardrive's explicit coordinator/node ESP-NOW topology was informed by

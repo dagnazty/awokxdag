@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'AWOKxDAG/network_parse.h'
+      - 'AWOKxDAG/camera_signatures.h'
+      - 'AWOKxDAG/cameras.ino'
       - 'AWOKxDAG/keyboard_layout.h'
       - 'AWOKxDAG/gps_timezone.h'
       - 'AWOKxDAG/timezone_data.h'
@@ -38,6 +40,8 @@ on:
   pull_request:
     paths:
       - 'AWOKxDAG/network_parse.h'
+      - 'AWOKxDAG/camera_signatures.h'
+      - 'AWOKxDAG/cameras.ino'
       - 'AWOKxDAG/keyboard_layout.h'
       - 'AWOKxDAG/gps_timezone.h'
       - 'AWOKxDAG/timezone_data.h'
@@ -81,7 +85,7 @@ jobs:
         with:
           node-version: '22'
       - name: Wardrive shutdown control-flow tests (mocked radios)
-        run: node --test tests/host/test_wardrive_shutdown.mjs
+        run: node --test tests/host/test_wardrive_shutdown.mjs tests/host/test_wardrive_capture.mjs
       - name: Phone keypad and offline timezone tests (no firmware build)
         run: node --test tests/host/test_keyboard.mjs tests/host/test_timezone.mjs
       - name: Verified file transfers and wardrive dashboard (mocked I/O, no firmware build)

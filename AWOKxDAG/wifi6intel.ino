@@ -320,7 +320,7 @@ void drawWifi6Intel() {
 }
 
 void startWifi6Intel() {
-  stopActiveTools();
+  if (!stopActiveTools()) return;
   if (!ensureWifiStation(true)) return;
 
   if (!wifi6Aps.allocate() || !wifi6Queue.begin()) {

@@ -299,8 +299,8 @@ void drawSettings() {
     display.setCursor(8, 96); display.print("GPS baud " + String(AwokPins::kGpsBaud));
     display.setCursor(8, 112); display.print("Splash Show / active tools Immediate");
     display.setCursor(8, 128); display.print("Raw NMEA Off");
-    display.setCursor(8, 146); display.print("Keeps saved networks, files,");
-    display.setCursor(8, 160); display.print("and the GPS-selected timezone.");
+    display.setCursor(8, 146); display.print("Keeps saved APs and Wi-Fi keys,");
+    display.setCursor(8, 160); display.print("files and GPS-selected timezone.");
     drawSmallButton(8, 176, 224, 44, "Restore defaults", kBad);
     drawSmallButton(4, 280, 232, 36, "Cancel", kMuted);
     return;

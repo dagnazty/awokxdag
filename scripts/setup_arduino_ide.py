@@ -10,9 +10,8 @@ with a multiple-definition error unless this flag is in platform.local.txt.
 wifi_init_wrap.c to trim STA buffers + CSI/AMPDU; --wrap=esp_bt_controller_init
 trims the BLE controller's duplicate lists.
 
-AWOKxDAG is BLE Observer-only (scan; no client/server/adv anywhere in the
-sketch), so the CONFIG_BT_NIMBLE_ROLE_*_DISABLED flags trim NimBLE-Arduino's
-default Central/Peripheral/Broadcaster footprint. The actual fix for BLE scan
+C5 screen builds also use NimBLE Central for selected-device GATT audits, so
+only Peripheral/Broadcaster are disabled globally. The actual fix for BLE scan
 failing with HCI "Memory Capacity Exceeded" (NimBLE rc=519) on the C5 is the
 time-multiplex RadioScheduler in the firmware (only one radio DMA-resident at
 a time); these flags just keep the footprint lean.
@@ -26,13 +25,13 @@ build.code_debug=1 is Error-level CORE_DEBUG_LEVEL: silent unless something
 is wrong, but it's what surfaces NimBLE's own error rc codes, which are
 compiled out entirely at the default level 0.
 """
+import argparse
 from pathlib import Path
 import os
 
 LINKER_FLAGS = ("-Wl,-z,muldefs", "-Wl,--wrap=esp_wifi_init",
                 "-Wl,--wrap=esp_bt_controller_init")
 NIMBLE_FLAGS = (
-    "-DCONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED",
     "-DCONFIG_BT_NIMBLE_ROLE_PERIPHERAL_DISABLED",
     "-DCONFIG_BT_NIMBLE_ROLE_BROADCASTER_DISABLED",
 )
@@ -53,11 +52,14 @@ def cores():
     return found
 
 
-def ensure_local(core: Path) -> str:
+def ensure_local(core: Path, classic: bool = False) -> str:
     path = core / "platform.local.txt"
     text = path.read_text() if path.is_file() else ""
     lines = text.splitlines()
     remaining = dict(PROPERTIES)
+    if classic:
+        remaining["compiler.cpp.extra_flags"] = (
+            "-DCONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED", *NIMBLE_FLAGS)
     changed = False
     for i, line in enumerate(lines):
         stripped = line.strip()
@@ -68,9 +70,16 @@ def ensure_local(core: Path) -> str:
         if key not in remaining:
             continue
         flags = value.split()
+        if key == "compiler.cpp.extra_flags" and not classic:
+            # Earlier setup versions disabled Central. Remove that stale flag
+            # so Arduino IDE can compile the C5 GATT auditor.
+            old = "-DCONFIG_BT_NIMBLE_ROLE_CENTRAL_DISABLED"
+            if old in flags:
+                flags.remove(old)
+                changed = True
         missing = [flag for flag in remaining[key] if flag not in flags]
         del remaining[key]
-        if not missing:
+        if not missing and lines[i] == f"{key}={' '.join(flags)}":
             continue
         flags.extend(missing)
         lines[i] = f"{key}={' '.join(flags)}"
@@ -86,7 +95,7 @@ def ensure_local(core: Path) -> str:
     out += (
         "# AWOKxDAG: ieee80211_raw_frame_sanity_check must win over "
         "libnet80211.a; wrap esp_wifi_init/esp_bt_controller_init trims the "
-        "radios; NimBLE compiled Observer-only\n"
+        "radios; NimBLE Central is selected per board profile\n"
     )
     for key, flags in remaining.items():
         out += f"{key}={' '.join(flags)}\n"
@@ -95,9 +104,13 @@ def ensure_local(core: Path) -> str:
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--classic", action="store_true",
+                        help="trim NimBLE Central for low-memory classic and Cardputer boards")
+    args = parser.parse_args()
     os.umask(0o022)
     for core in cores():
-        print(ensure_local(core))
+        print(ensure_local(core, args.classic))
     print("Restart Arduino IDE if it is already open, then Verify again.")
 
 

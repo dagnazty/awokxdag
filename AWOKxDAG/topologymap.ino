@@ -645,7 +645,7 @@ void drawTopologyMap() {
 }
 
 void startTopologyMap() {
-  stopActiveTools();
+  if (!stopActiveTools()) return;
   if (!topoAps.allocate() || !topoClients.allocate() ||
       !topoProbes.allocate() || !topoHitQueue.begin()) {
     topoHitQueue.release();

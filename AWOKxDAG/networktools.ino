@@ -25,6 +25,11 @@ NetJob netJob = NetJob::None;
 NetJob netLastJob = NetJob::None;
 NetStage netStage = NetStage::Idle;
 String netSsid, netPassword, netEdit, netStatus;
+char netPendingPassword[64] = {};
+bool netSaveOnJoin = true;
+int netSavedSelected = -1;
+uint32_t netSavedCount = 0;
+String netSavedNames[SavedWifi::kCapacity];
 bool netEditPassword = false;
 AwokKeyboard::Mode netKeyMode = AwokKeyboard::Lower;
 AwokKeyboard::Tap netKeyTap;
@@ -117,6 +122,54 @@ void netWipe(String& value) {
   for (size_t i = 0; i < value.length(); ++i) value.setCharAt(i, 0);
   value = "";
 }
+bool netReadSavedWifi(SavedWifi::Snapshot& snapshot) {
+  snapshot = SavedWifi::Snapshot{};
+  Preferences preferences;
+  if (!preferences.begin("awok-wifi", false)) return false;
+  if (!preferences.isKey("networks")) {
+    preferences.end();
+    return true;
+  }
+  const bool read = preferences.getBytesLength("networks") == sizeof(snapshot) &&
+      preferences.getBytes("networks", &snapshot, sizeof(snapshot)) == sizeof(snapshot);
+  preferences.end();
+  return read && SavedWifi::valid(snapshot);
+}
+bool netWriteSavedWifi(const SavedWifi::Snapshot& snapshot) {
+  if (!SavedWifi::valid(snapshot)) return false;
+  Preferences preferences;
+  if (!preferences.begin("awok-wifi", false)) return false;
+  const bool written = preferences.putBytes("networks", &snapshot,
+                                            sizeof(snapshot)) == sizeof(snapshot);
+  preferences.end();
+  return written;
+}
+bool netRefreshSavedWifi() {
+  SavedWifi::Snapshot snapshot;
+  const bool ok = netReadSavedWifi(snapshot);
+  netSavedCount = ok ? snapshot.count : 0;
+  for (uint32_t i = 0; i < SavedWifi::kCapacity; ++i)
+    netSavedNames[i] = i < netSavedCount ? snapshot.entries[i].ssid : "";
+  SavedWifi::wipe(&snapshot, sizeof(snapshot));
+  return ok;
+}
+bool netRememberJoinedWifi() {
+  SavedWifi::Snapshot snapshot;
+  if (!netReadSavedWifi(snapshot)) {
+    SavedWifi::wipe(&snapshot, sizeof(snapshot));
+    return false;
+  }
+  const int existing = SavedWifi::find(snapshot, netSsid.c_str());
+  if (existing >= 0 &&
+      strcmp(snapshot.entries[existing].password, netPendingPassword) == 0) {
+    SavedWifi::wipe(&snapshot, sizeof(snapshot));
+    return true;
+  }
+  const bool fits = SavedWifi::put(snapshot, netSsid.c_str(), netPendingPassword);
+  const bool written = fits && netWriteSavedWifi(snapshot);
+  SavedWifi::wipe(&snapshot, sizeof(snapshot));
+  return written;
+}
 const char* netJobName(NetJob job) {
   switch (job) {
     case NetJob::Join: return "Connect";
@@ -144,6 +197,7 @@ void closeNetworkTools() {
   WiFi.setAutoReconnect(false);
   shutdownWifi();
   netWipe(netPassword); netWipe(netEdit); netSsid = "";
+  SavedWifi::wipe(netPendingPassword, sizeof(netPendingPassword));
   netFreeWorkspace();
   netOpen = false;
   netSetupReturnUpload = false;
@@ -276,8 +330,10 @@ void drawNetworkSetup() {
   netCard(0, "SSID", netSsid.length() ? netSsid : "Select to enter network name");
   netCard(1, "Password", netPassword.length() ? "********" : "Empty (open network)");
   netCard(2, "Choose scanned AP", "Pick from scan / rescan networks");
-  netCard(3, "Join network", "Credentials kept in RAM only");
-  netText(264, netStatus);
+  netCard(3, "Join network", netSaveOnJoin ? "Save after successful join" : "Use once (RAM only)");
+  netText(44, netStatus);
+  drawSmallButton(8, 255, 106, 22, netSaveOnJoin ? "Save: ON" : "Save: OFF", kAccent);
+  drawSmallButton(124, 255, 108, 22, "Saved Wi-Fi", kAccent);
   drawSmallButton(4, 280, 112, 36, "Back", kMuted);
   if (WiFi.status() == WL_CONNECTED) drawSmallButton(124, 280, 112, 36, "Disconnect", kAccent);
 }
@@ -401,6 +457,66 @@ void drawNetworkAps() {
   if (netApPage + 1 < pages) drawSmallButton(124, 280, 52, 36, "Next", kAccent);
   drawSmallButton(180, 280, 56, 36, "Scan", kAccent);
 }
+void drawNetworkSaved() {
+  currentView = View::kNetworkSaved;
+  display.fillScreen(kBackground);
+  const bool loaded = netRefreshSavedWifi();
+  if (!loaded) netSavedSelected = -1;
+  if (netSavedSelected >= static_cast<int>(netSavedCount)) netSavedSelected = -1;
+  drawHeader("SAVED WI-FI", loaded ? String(netSavedCount) + " network(s)" : "Storage read failed");
+  if (netSavedSelected >= 0) {
+    netText(44, netSavedNames[netSavedSelected]);
+    netCard(0, "Join saved network", "Use stored Wi-Fi password");
+    netCard(1, "Forget network", "Delete this stored Wi-Fi password");
+    netCard(2, "Saved network list", "Choose another saved network");
+  } else {
+    for (uint32_t i = 0; i < netSavedCount; ++i)
+      netCard(i, netSavedNames[i], "Select to join or forget");
+    if (loaded && !netSavedCount) netText(90, "No saved Wi-Fi connections yet.");
+  }
+  netText(264, netStatus);
+  drawSmallButton(4, 280, 112, 36, "Back", kMuted);
+}
+void handleNetworkSavedTouch(int x, int y) {
+  if (gpsMenuHit(x, y, 4, 280, 112, 36)) {
+    if (netSavedSelected >= 0) { netSavedSelected = -1; drawNetworkSaved(); }
+    else drawNetworkSetup();
+    return;
+  }
+  const int row = netCardHit(x, y, kNetMenuRows);
+  if (row < 0) return;
+  if (netSavedSelected < 0) {
+    if (row >= static_cast<int>(netSavedCount)) return;
+    netSavedSelected = row;
+    drawNetworkSaved();
+    return;
+  }
+  if (row == 2) { netSavedSelected = -1; drawNetworkSaved(); return; }
+  if (row > 1) return;
+  SavedWifi::Snapshot snapshot;
+  if (!netReadSavedWifi(snapshot) ||
+      netSavedSelected >= static_cast<int>(snapshot.count)) {
+    SavedWifi::wipe(&snapshot, sizeof(snapshot));
+    netStatus = "Saved Wi-Fi read failed";
+    netSavedSelected = -1; drawNetworkSetup(); return;
+  }
+  const int selected = netSavedSelected;
+  if (row == 0) {
+    netWipe(netPassword);
+    netSsid = snapshot.entries[selected].ssid;
+    netPassword = snapshot.entries[selected].password;
+    SavedWifi::wipe(&snapshot, sizeof(snapshot));
+    netSavedSelected = -1;
+    netJoin();
+    return;
+  }
+  SavedWifi::remove(snapshot, selected);
+  const bool removed = netWriteSavedWifi(snapshot);
+  SavedWifi::wipe(&snapshot, sizeof(snapshot));
+  netStatus = removed ? "Saved Wi-Fi forgotten" : "Could not forget saved Wi-Fi";
+  netSavedSelected = -1;
+  drawNetworkSaved();
+}
 int netResultPages() {
   return max(1, ((netShowHosts ? netHostCount : netResultCount) + kNetResultRows - 1) / kNetResultRows);
 }
@@ -521,6 +637,7 @@ void netFinish(const String& message) {
 void netDisconnect() {
   netCloseSocket(); netUdp.stop(); netJob = NetJob::None; netStage = NetStage::Idle;
   WiFi.setAutoReconnect(false); shutdownWifi(); netWipe(netPassword); netWipe(netEdit);
+  SavedWifi::wipe(netPendingPassword, sizeof(netPendingPassword));
   netHostCount = netResultCount = 0; netSelectedHost = -1;
   netHostSummary = NetSummary{}; netResultSummary = NetSummary{};
   netHostsLimited = false; netStatus = "Disconnected";
@@ -538,6 +655,8 @@ void netJoin() {
   if (!ensureWifiStation()) { netStatus = "Wi-Fi initialization failed"; drawNetworkSetup(); return; }
   WiFi.setAutoReconnect(false); esp_wifi_set_storage(WIFI_STORAGE_RAM);
   WiFi.disconnect(false, false);
+  SavedWifi::wipe(netPendingPassword, sizeof(netPendingPassword));
+  memcpy(netPendingPassword, netPassword.c_str(), netPassword.length());
   WiFi.begin(netSsid.c_str(), netPassword.c_str()); netWipe(netPassword);
   netJob = NetJob::Join; netDeadline = millis() + 20000; netStatus = "Connecting...";
   recordFirmwareAudit("network", "connect", "started", "user-selected network");
@@ -871,8 +990,11 @@ void updateNetworkTools() {
   if (currentView == View::kNetworkEdit && netKeyTap.expire(millis())) drawNetworkEditor();
   if (!netOpen || netJob == NetJob::None) return;
   if (netJob == NetJob::Join) {
-    if (WiFi.status() == WL_CONNECTED) {
+    if (WiFi.status() == WL_CONNECTED && WiFi.SSID() == netSsid) {
       netJob = NetJob::None; netStatus = "Connected: " + WiFi.localIP().toString();
+      if (netSaveOnJoin && !netRememberJoinedWifi())
+        netStatus += " | Wi-Fi not saved";
+      SavedWifi::wipe(netPendingPassword, sizeof(netPendingPassword));
       recordFirmwareAudit("network", "connect", "success", WiFi.localIP().toString());
       drawNetworkSetup();
     } else if (netExpired()) {
@@ -981,6 +1103,7 @@ void handleNetworkTouch(int x, int y) {
   }
   if (currentView == View::kNetworkSetup) { handleNetworkSetupTouch(x, y); return; }
   if (currentView == View::kNetworkAps) { handleNetworkApsTouch(x, y); return; }
+  if (currentView == View::kNetworkSaved) { handleNetworkSavedTouch(x, y); return; }
   if (currentView == View::kNetworkMenu) { handleNetworkMenuTouch(x, y); return; }
   if (currentView == View::kNetworkResults) { handleNetworkResultsTouch(x, y); return; }
   if (currentView == View::kNetworkHost) { handleNetworkHostTouch(x, y); return; }
@@ -998,6 +1121,12 @@ void handleNetworkSetupTouch(int x, int y) {
   }
   if (gpsMenuHit(x, y, 4, 280, 112, 36)) { netReturnFromSetup(); return; }
   if (gpsMenuHit(x, y, 124, 280, 112, 36) && WiFi.status() == WL_CONNECTED) { netDisconnect(); drawNetworkSetup(); return; }
+  if (gpsMenuHit(x, y, 8, 255, 106, 22)) {
+    netSaveOnJoin = !netSaveOnJoin; drawNetworkSetup(); return;
+  }
+  if (gpsMenuHit(x, y, 124, 255, 108, 22)) {
+    netSavedSelected = -1; drawNetworkSaved(); return;
+  }
   const int row = netCardHit(x, y, kNetMenuRows);
   if (row == 0 || row == 1) {
     netEditPassword = row == 1; netEdit = netEditPassword ? netPassword : netSsid;

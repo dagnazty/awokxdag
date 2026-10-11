@@ -20,6 +20,8 @@ function adapt(s){return s
   .replaceAll('NetJob::','NetJob.').replaceAll('NetStage::','NetStage.').replaceAll('View::','View.').replaceAll('AwokKeyboard::','AwokKeyboard.').replaceAll('NetworkParse::','NetworkParse.')
   .replaceAll('.c_str()','').replaceAll('.length()', '.length').replace(/\bstrlen\((\w+)\)/g,'$1.length')
   .replace('const detail(item.detail);','const detail = item.detail;')
+  .replaceAll('SavedWifi::wipe(netPendingPassword, sizeof(netPendingPassword));','netPendingPassword = "";')
+  .replace('memcpy(netPendingPassword, netPassword, netPassword.length);','netPendingPassword = netPassword;')
   .replace('(const uint8_t*)request','request').replace('IPAddress(239,255,255,250)','"239.255.255.250"')
   .replace(/\b(0x[0-9a-f]+)U\b/g,'$1')
   .replace(/uint32_t lastDraw = 0;/,'let lastDraw = 0;')
@@ -36,7 +38,7 @@ export function harness(){
     netHostsPage:0,netServicesPage:0,netResultsHost:-1,netResultsActions:false,netSetupReturnResults:false,netSetupReturnUpload:false,
     netHostCount:0,netResultCount:0,netHosts:[],netResults:[],netSelectedHost:-1,netSelectedResult:0,netShowHosts:true,
     netHostSummary:makeSummary(),netResultSummary:makeSummary(),makeSummary,
-    netSsid:'Lab',netPassword:'',netEdit:'',netEditPassword:false,netStatus:'',netLimited:false,netSubnetLimited:false,netHostsLimited:false,
+    netSsid:'Lab',netPassword:'',netPendingPassword:'',netSaveOnJoin:true,netSavedSelected:-1,netEdit:'',netEditPassword:false,netStatus:'',netLimited:false,netSubnetLimited:false,netHostsLimited:false,
     netCompleted:0,netTimeouts:0,netErrors:0,netRefused:0,netSessionIp:0,netSessionMask:0,
     netFirst:1,netLast:30,netCursor:0,netHostCursor:0,netHostEnd:0,netPortCursor:0,netDeadline:0,netMappingIndex:0,netUpnpStep:0,
     kNetMenuRows:4,kNetResultRows:3,kNetSipLocalPort:49160,kBackground:0,kMuted:1,kAccent:2,kWarn:3,
@@ -51,6 +53,8 @@ export function harness(){
     netEnsureWorkspace:()=>c.workspace,netCloseSocket:()=>calls.push(['socketClose']),
     netUdp:{stop(){},begin:()=>true,beginPacket:()=>true,write:(s,n)=>n,endPacket:()=>true},
     netSnapshot(){},netJobName:job=>job,recordFirmwareAudit:(...a)=>calls.push(['audit',...a]),
+    netRememberJoinedWifi:()=>{calls.push(['rememberWifi']);return true;},
+    drawNetworkSaved:()=>{c.currentView='kNetworkSaved';calls.push(['savedWifi']);},
     ensureWifiStation:()=>c.stationOk,esp_wifi_set_storage(){},WIFI_STORAGE_RAM:0,
     shutdownWifi:()=>{c.connected=false;calls.push(['shutdownWifi']);},
     closeNetworkTools:()=>{c.netOpen=false;calls.push(['closeNetworkTools']);},drawReconMenu:()=>calls.push(['recon']),

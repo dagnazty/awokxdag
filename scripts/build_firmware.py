@@ -10,6 +10,10 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 C5_FQBN = "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,PSRAM=enabled"
+NM_CYD_C5_FQBN = (
+    "esp32:esp32:esp32c5:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,"
+    "PSRAM=enabled"
+)
 
 CLASSIC_FQBN = "esp32:esp32:esp32:FlashSize=4M,PartitionScheme=huge_app,PSRAM=disabled"
 CARDPUTER_V11_FQBN = (
@@ -21,9 +25,9 @@ T_DONGLE_C5_FQBN = (
     "PSRAM=enabled,CDCOnBoot=cdc"
 )
 
-# AWOKxDAG is BLE Observer-only (scan; no client/server/adv anywhere in the
-# sketch), so NimBLE-Arduino's default Central/Peripheral/Broadcaster roles are
-# pure waste. Trimming them shrinks the BLE footprint; the actual fix for BLE
+# Most boards use BLE Observer only. C5 screen boards also use Central for the
+# selected-device GATT auditor; bridge boards use Peripheral and Broadcaster
+# for phone control. Trimming unused roles shrinks the BLE footprint; the fix for BLE
 # scan failing with HCI "Memory Capacity Exceeded" (NimBLE rc=519) on Dual C5
 # is the time-multiplex RadioScheduler (only one radio DMA-resident at a time).
 #
@@ -38,6 +42,11 @@ NIMBLE_OBSERVER_ONLY_FLAGS = (
     "-DCONFIG_BT_NIMBLE_ROLE_PERIPHERAL_DISABLED "
     "-DCONFIG_BT_NIMBLE_ROLE_BROADCASTER_DISABLED"
 )
+NIMBLE_GATT_AUDIT_FLAGS = (
+    "-DCONFIG_BT_NIMBLE_ROLE_PERIPHERAL_DISABLED "
+    "-DCONFIG_BT_NIMBLE_ROLE_BROADCASTER_DISABLED"
+)
+GATT_AUDIT_BOARDS = {"dual-c5-touch", "dual-c5-mini", "nm-cyd-c5"}
 # The merged bridge runs the full firmware headless with a GATT server: it needs
 # the PERIPHERAL role (server), BROADCASTER role (advertising), and OBSERVER
 # role (BLE-scan tools), so only Central is trimmed.
@@ -48,10 +57,15 @@ LINKER_WRAP_FLAGS = (
 )
 
 PROFILES = {
+    "cyd-2432s028": (CLASSIC_FQBN, "AWOK_CYD_2432S028"),
+    "halehound-e32r28t": (CLASSIC_FQBN, "AWOK_HALEHOUND_E32R28T"),
+    "halehound-e32r35t": (CLASSIC_FQBN, "AWOK_HALEHOUND_E32R35T"),
+    "halehound-nm-rf-hat": (CLASSIC_FQBN, "AWOK_HALEHOUND_NM_RF_HAT"),
     "cardputer-v11": (CARDPUTER_V11_FQBN, "AWOK_CARDPUTER_V11"),
     "dual-c5-touch": (C5_FQBN, "AWOK_DUAL_C5_TOUCH"),
     "dual-c5-mini": (C5_FQBN, "AWOK_DUAL_C5_MINI"),
     "marauder-mini-v3": (C5_FQBN, "AWOK_MARAUDER_MINI_V3"),
+    "nm-cyd-c5": (NM_CYD_C5_FQBN, "AWOK_NM_CYD_C5"),
     "dual-esp32-touch-v1": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V1"),
     "dual-esp32-touch-v2": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V2"),
     "dual-esp32-touch-v3": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V3"),
@@ -105,7 +119,9 @@ def main():
         fqbn, define = PROFILES[args.board]
         sketch = ROOT / "AWOKxDAG/AWOKxDAG.ino"
         celf_flags = LINKER_WRAP_FLAGS
-        cpp_flags = f"-D{define} {NIMBLE_OBSERVER_ONLY_FLAGS}"
+        nimble_flags = (NIMBLE_GATT_AUDIT_FLAGS if args.board in GATT_AUDIT_BOARDS
+                        else NIMBLE_OBSERVER_ONLY_FLAGS)
+        cpp_flags = f"-D{define} {nimble_flags}"
     stem = sketch.name  # e.g. AWOKxDAG.ino or AxDBridge.ino
 
     command = ["arduino-cli", "compile", "--fqbn", fqbn, "--warnings", "all",
@@ -138,7 +154,9 @@ def main():
     metadata.write_text(json.dumps({
         "version": version, "board": args.board, "fqbn": fqbn,
         "experimental": args.board.startswith("dual-esp32") or args.board in
-                        ("cardputer-v11", "lilygo-t-dongle-c5-bridge"),
+                        ("cardputer-v11", "lilygo-t-dongle-c5-bridge",
+                         "nm-cyd-c5", "cyd-2432s028", "halehound-e32r28t",
+                         "halehound-e32r35t", "halehound-nm-rf-hat"),
         "hardware_tested": args.board in ("dual-c5-touch", "dual-c5-mini"),
         "compile_command": command,
         "core": subprocess.check_output(["arduino-cli", "core", "list"], text=True),
