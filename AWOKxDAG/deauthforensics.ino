@@ -303,18 +303,18 @@ void drawDeauthForensics() {
 #ifdef AWOK_MINI_DISPLAY
   display.setTextSize(1);
   if (attackActive) {
-    display.fillRect(0, 42, 128, 14, ILI9341_RED);
+    display.fillRect(scaleX(0), scaleY(42), scaleX(128), scaleY(14), ILI9341_RED);
     display.setTextColor(ILI9341_WHITE, ILI9341_RED);
-    display.setCursor(4, 45);
+    display.setCursor(scaleX(4), scaleY(45));
     display.print("! ACTIVE ATTACK !");
   } else {
     display.setTextColor(ILI9341_GREEN, kBackground);
-    display.setCursor(4, 45);
+    display.setCursor(scaleX(4), scaleY(45));
     display.print(AwokPins::kDualBand ? "Dual-Band 2.4/5G Active" : "Monitoring Airwaves");
   }
 
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(2, 60);
+  display.setCursor(scaleX(2), scaleY(60));
   if (pages > 1) {
     display.printf("Tgt:%-2lu Bc:%-2lu pg %d/%d",
                    static_cast<unsigned long>(deauthTargetedCount),
@@ -337,7 +337,7 @@ void drawDeauthForensics() {
     const auto& ev = deauthEvents[startIdx + i];
     const int y = 72 + i * 11;
     display.setTextColor((ev.attackType == kDeauthTypeTargeted) ? ILI9341_RED : ILI9341_YELLOW, kBackground);
-    display.setCursor(2, y);
+    display.setCursor(scaleX(2), scaleY(y));
     display.printf("%02X:%02X c%-3u R%-2u %3d", ev.targetMac[4], ev.targetMac[5], ev.channel, ev.reasonCode, ev.rssi);
   }
   if (pages > 1) {
@@ -350,38 +350,38 @@ void drawDeauthForensics() {
 
   // Touch screen (240x320)
   if (attackActive) {
-    display.fillRect(8, 42, 224, 20, ILI9341_RED);
+    display.fillRect(scaleX(8), scaleY(42), scaleX(224), scaleY(20), ILI9341_RED);
     display.setTextColor(ILI9341_WHITE, ILI9341_RED);
     display.setTextSize(1);
-    display.setCursor(14, 48);
+    display.setCursor(scaleX(14), scaleY(48));
     display.print("! ATTACK DETECTED: DEAUTHENTICATION !");
   } else {
-    display.drawRoundRect(8, 42, 224, 20, 4, 0x3186);
+    display.drawRoundRect(scaleX(8), scaleY(42), scaleX(224), scaleY(20), 4, 0x3186);
     display.setTextColor(ILI9341_GREEN, kBackground);
     display.setTextSize(1);
-    display.setCursor(14, 48);
+    display.setCursor(scaleX(14), scaleY(48));
     display.print(AwokPins::kDualBand ? "DUAL-BAND 2.4 & 5 GHz MONITOR: CLEAR" : "PASSIVE DEFENSIVE MONITOR: CLEAR");
   }
 
   display.setTextColor(0x7BEF, kBackground);
-  display.setCursor(8, 68);
+  display.setCursor(scaleX(8), scaleY(68));
   display.print("TYPE    VICTIM      BSSID    CH  RSN  RSSI");
-  display.drawFastHLine(8, 78, 224, 0x3186);
+  display.drawFastHLine(scaleX(8), scaleY(78), scaleX(224), 0x3186);
 
   constexpr int kRowY = 82;
   constexpr int kRowH = 20;
 
   if (deauthEventCount == 0) {
     display.setTextColor(0x7BEF, kBackground);
-    display.setCursor(20, 136);
+    display.setCursor(scaleX(20), scaleY(136));
     display.print("No deauth frames detected.");
-    display.setCursor(20, 150);
+    display.setCursor(scaleX(20), scaleY(150));
     if (AwokPins::kDualBand) {
       display.printf("Monitoring 2.4 & 5 GHz (Ch %u)...", kDeauthHopChannels[deauthForensicsHopIndex]);
     } else {
       display.printf("Monitoring Ch 1-13 (Ch %u)...", kDeauthHopChannels[deauthForensicsHopIndex]);
     }
-    display.setCursor(20, 164);
+    display.setCursor(scaleX(20), scaleY(164));
     display.print("Passive dual-radio attribution");
   } else {
     const int startIdx = deauthForensicsPage * kDeauthForensicsRowsPerPage;
@@ -399,12 +399,12 @@ void drawDeauthForensics() {
       else if (ev.attackType == kDeauthTypeAnomaly) { tCol = ILI9341_MAGENTA; tStr = "ANOM "; }
 
       display.setTextColor(tCol, kBackground);
-      display.setCursor(8, y + 3);
+      display.setCursor(scaleX(8), scaleY(y + 3));
       display.print(tStr);
 
       // Victim MAC (last 3 bytes)
       display.setTextColor(ILI9341_WHITE, kBackground);
-      display.setCursor(50, y + 3);
+      display.setCursor(scaleX(50), scaleY(y + 3));
       if (ev.targetMac[0] == 0xFF) {
         display.print("FF:FF:FF");
       } else {
@@ -413,22 +413,22 @@ void drawDeauthForensics() {
 
       // AP BSSID (last 3 bytes)
       display.setTextColor(0x8410, kBackground);
-      display.setCursor(104, y + 3);
+      display.setCursor(scaleX(104), scaleY(y + 3));
       display.printf("%02X:%02X:%02X", ev.bssid[3], ev.bssid[4], ev.bssid[5]);
 
       // Channel (Cyan for 5 GHz, White for 2.4 GHz)
       display.setTextColor(ev.channel > 14 ? ILI9341_CYAN : ILI9341_WHITE, kBackground);
-      display.setCursor(158, y + 3);
+      display.setCursor(scaleX(158), scaleY(y + 3));
       display.printf("%-3u", ev.channel);
 
       // Reason Code
       display.setTextColor(ILI9341_YELLOW, kBackground);
-      display.setCursor(182, y + 3);
+      display.setCursor(scaleX(182), scaleY(y + 3));
       display.printf("R%-2u", ev.reasonCode);
 
       // RSSI
       display.setTextColor(ev.rssi >= -65 ? ILI9341_GREEN : (ev.rssi >= -80 ? ILI9341_YELLOW : ILI9341_RED), kBackground);
-      display.setCursor(210, y + 3);
+      display.setCursor(scaleX(210), scaleY(y + 3));
       display.printf("%3d", ev.rssi);
     }
   }

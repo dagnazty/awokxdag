@@ -221,7 +221,7 @@ void drawHandshake() {
   display.setTextSize(2);
   display.setTextColor(
       (complete || handshakePmkidSeen) ? kGood : kAccent, kBackground);
-  display.setCursor(6, 50);
+  display.setCursor(scaleX(6), scaleY(50));
   if (handshakePmkidSeen && complete) {
     display.print("GOT PMKID+HS");
   } else if (complete) {
@@ -234,42 +234,42 @@ void drawHandshake() {
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 82);
+  display.setCursor(scaleX(6), scaleY(82));
   display.print("BSSID: ");
   display.print(macToString(handshakeTargetBssid));
-  display.setCursor(6, 96);
+  display.setCursor(scaleX(6), scaleY(96));
   display.printf("Channel %d %sG   pulse %s",
                  static_cast<int>(handshakeChannel),
                  bandLabel(handshakeChannel),
                  handshakePulseEnabled ? "on" : "off");
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 116);
+  display.setCursor(scaleX(6), scaleY(116));
   display.printf("EAPOL frames: %lu",
                  static_cast<unsigned long>(handshakeEapolCount));
-  display.setCursor(6, 130);
+  display.setCursor(scaleX(6), scaleY(130));
   display.printf("Beacons kept: %lu",
                  static_cast<unsigned long>(handshakeBeaconCount));
 
-  display.drawFastHLine(6, 148, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(148), scaleX(228), kPanel);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 156);
+  display.setCursor(scaleX(6), scaleY(156));
   display.print("4-WAY PROGRESS");
   for (int message = 0; message < 4; ++message) {
     const bool seen = handshakeMsgSeen & (1 << message);
     display.setTextColor(seen ? kGood : kMuted, kBackground);
-    display.setCursor(6 + message * 58, 172);
+    display.setCursor(scaleX(6 + message * 58), scaleY(172));
     display.printf("M%d %s", message + 1, seen ? "ok" : "--");
   }
 
   display.setTextColor(handshakePmkidSeen ? kGood : kMuted, kBackground);
-  display.setCursor(6, 192);
+  display.setCursor(scaleX(6), scaleY(192));
   display.printf("PMKID: %s", pmkidWritten ? "saved to pmkid.txt"
                                            : (handshakePmkidSeen ? "yes"
                                                                  : "not seen"));
 
   display.setTextColor(captureFileOpen ? kAccent : kWarn, kBackground);
-  display.setCursor(6, 212);
+  display.setCursor(scaleX(6), scaleY(212));
   if (captureFileOpen) {
     const int slash = handshakeCapturePath.lastIndexOf('/');
     const String filename = slash >= 0
@@ -281,7 +281,7 @@ void drawHandshake() {
     display.print("SD unavailable; not saving");
   }
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 232);
+  display.setCursor(scaleX(6), scaleY(232));
   display.print("Authorized testing only.");
   drawFooter("Back", handshakePulseEnabled ? "Pulse off" : "Pulse on");
 }
