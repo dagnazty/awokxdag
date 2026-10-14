@@ -42,7 +42,7 @@ uint32_t lastSpecDrawMs = 0;
 uint32_t lastPeakDecayMs = 0;
 uint32_t specStartMs = 0;
 uint32_t lastSpecRowPushMs = 0;
-uint32_t specSweepIntervalMs = 0;
+uint32_t specHopCycleMs = 0;
 uint8_t specCurrentChannel = 1;
 
 // Per-dwell volatile accumulators
@@ -247,15 +247,15 @@ void spectrogramRecordDwell() {
 
 static void specResetScroll() {
     lastSpecRowPushMs = 0;
-    specSweepIntervalMs = 0;
+    specHopCycleMs = 0;
 }
 
 void spectrogramPushWaterfallRow() {
     const uint32_t nowPush = millis();
     if (lastSpecRowPushMs != 0) {
         const uint32_t interval = nowPush - lastSpecRowPushMs;
-        if (specSweepIntervalMs == 0) specSweepIntervalMs = interval;
-        else specSweepIntervalMs = (specSweepIntervalMs * 3 + interval) / 4;
+        if (specHopCycleMs == 0) specHopCycleMs = interval;
+        else specHopCycleMs = (specHopCycleMs * 3 + interval) / 4;
     }
     lastSpecRowPushMs = nowPush;
 
@@ -453,10 +453,10 @@ void drawSpectrogram() {
   const int wRows = kWaterfallHistoryRows;
 
   uint32_t specScrollOffset = 0;
-  if (specSweepIntervalMs > kSpectrogramRedrawMs && lastSpecRowPushMs != 0) {
+  if (specHopCycleMs > kSpectrogramRedrawMs && lastSpecRowPushMs != 0) {
     const uint32_t sinceRow = millis() - lastSpecRowPushMs;
-    if (sinceRow < specSweepIntervalMs) {
-      specScrollOffset = 256 - (uint32_t)(sinceRow * 256UL / specSweepIntervalMs);
+    if (sinceRow < specHopCycleMs) {
+      specScrollOffset = 256 - (uint32_t)(sinceRow * 256UL / specHopCycleMs);
     }
   }
 
@@ -573,7 +573,7 @@ void spectrogramCycleBand() {
 }
 
 void startSpectrogram() {
-  if (!stopActiveTools()) return;
+  stopActiveTools();
   if (!ensureWifiStation(true)) return;
 
   specHopIndex = 0;
