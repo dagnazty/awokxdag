@@ -1,5 +1,6 @@
 // Arduino IDE selection.
 #if !defined(AWOK_DUAL_C5_TOUCH) && !defined(AWOK_DUAL_C5_MINI) && \
+    !defined(AWOK_MARAUDER_MINI_V3) && \
     !defined(AWOK_NM_CYD_C5) && \
     !defined(AWOK_CYD_2432S028) && !defined(AWOK_HALEHOUND_E32R28T) && \
     !defined(AWOK_HALEHOUND_E32R35T) && !defined(AWOK_HALEHOUND_NM_RF_HAT) && \
@@ -753,6 +754,8 @@ void drawButton(int x, int y, int w, int h, const String& label,
 void drawHeader(const String& title, const String& detail) {
 #ifdef AWOK_MINI_DISPLAY
   display.header(title.c_str(), detail.c_str());
+  display.version(kVersion);
+  display.gps(gpsHasFix() ? 2 : (gpsCharsProcessed() > 10 ? 1 : 0));
   return;
 #endif
   display.fillRect(0, 0, kScreenWidth, kHeaderHeight, kPanel);

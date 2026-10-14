@@ -323,9 +323,81 @@ bool exportSpectrogramToSd() {
   return true;
 }
 
+#ifdef AWOK_MINI_DISPLAY
+void drawSpectrogramMini() {
+  display.directBegin();
+  Adafruit_GFX* g = display.directCanvas();
+  if (!g) return;
+
+  const int W = 128;
+  const int total = specTotalChannels();
+  const int base = specBandBase();
+  const int curIdx = specChannelToIndex(specCurrentChannel);
+  const uint8_t curDuty = (curIdx >= 0 && curIdx < kMaxSpecBuckets) ? specStats[curIdx].dutyPercent : 0;
+  const int8_t curPeak = (curIdx >= 0 && curIdx < kMaxSpecBuckets) ? specStats[curIdx].peakRssi : -127;
+
+  const char* modeLabel = (specMode == kSpecMode24) ? "2.4G"
+                        : (specMode == kSpecModeAll) ? "2+5G"
+                        : (specMode == kSpecMode5) ? "5G" : "LOCK";
+
+  g->setTextSize(1);
+  g->setTextColor(ST7735_CYAN);
+  g->setCursor(1, 2); g->print("SPECTROGRAM");
+  char sub[28];
+  snprintf(sub, sizeof(sub), "%s Ch%u %u%% %ddB", modeLabel, specCurrentChannel, curDuty, curPeak);
+  g->setTextColor(0xc618);
+  g->setCursor(1, 12); g->print(sub);
+  g->drawFastHLine(0, 22, W, ST7735_BLUE);
+
+  const int sBaseY = 50, sMaxH = 26;
+  const int markCh = (curIdx >= 0) ? curIdx - base : -1;
+  int markPx = -1;
+  for (int px = 0; px < W; ++px) {
+    const int ch = (total > 1) ? px * (total - 1) / (W - 1) : 0;
+    const int bidx = base + ch;
+    int lvl = specLevel[bidx];
+    if (lvl > 100) lvl = 100;
+    int h = lvl * sMaxH / 100;
+    if (h < 1 && lvl > 0) h = 1;
+    if (h > 0) g->drawFastVLine(px, sBaseY - h, h, specPaletteLut[lvl]);
+    int pv = specPeakHold[bidx];
+    if (pv > 100) pv = 100;
+    if (pv > 0) {
+      int ph = pv * sMaxH / 100;
+      if (ph > sMaxH) ph = sMaxH;
+      g->drawPixel(px, sBaseY - ph, ST7735_WHITE);
+    }
+    if (markCh >= 0 && ch == markCh && markPx < 0) markPx = px;
+  }
+  g->drawFastHLine(0, sBaseY, W, 0x7bef);
+  if (markPx >= 0) g->drawFastVLine(markPx, sBaseY - sMaxH - 1, sMaxH + 2, ST7735_WHITE);
+
+  const int wTop = 54, wBot = 112;
+  const int wfH = wBot - wTop;
+  const int rows = kWaterfallHistoryRows;
+  for (int y = wTop; y < wBot; ++y) {
+    const int r = (wfH > 1) ? (y - wTop) * (rows - 1) / (wfH - 1) : 0;
+    const uint8_t* hist = waterfallHistory[(waterfallHead - r + rows) % rows];
+    for (int px = 0; px < W; ++px) {
+      const int ch = (total > 1) ? px * (total - 1) / (W - 1) : 0;
+      int v = hist[base + ch];
+      if (v > 100) v = 100;
+      g->drawPixel(px, y, specPaletteLut[specGammaLut[v]]);
+    }
+  }
+
+  g->setTextColor(0x7bef);
+  g->setCursor(1, 117); g->print("L:Bk U/D:Ch R:Band");
+}
+#endif
+
 void drawSpectrogram() {
   currentView = View::kSpectrogram;
   if (!specLutInit) specInitLuts();
+#ifdef AWOK_MINI_DISPLAY
+  drawSpectrogramMini();
+  return;
+#endif
   display.fillScreen(kBackground);
 
   const char* modeLabel = (specMode == kSpecMode24) ? "2.4 GHz"
@@ -347,27 +419,6 @@ void drawSpectrogram() {
   display.setCursor(174 + (62 - (int)strlen(bandTag) * 6) / 2, 16);
   display.print(bandTag);
 
-#ifdef AWOK_MINI_DISPLAY
-  display.setTextSize(1);
-  display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(2, 46);
-  display.printf("Mode: %-7s Ch: %-2u", modeLabel, specCurrentChannel);
-  display.setCursor(2, 58);
-  display.printf("Duty: %-3u%%  Peak: %d", curDuty, curPeak);
-  display.setCursor(2, 70);
-  display.printf("Noise: %-3d  SNR: %d", curNoise, (curPeak > -127 ? curPeak - curNoise : 0));
-
-  const int miniTotal = min(specTotalChannels(), 13);
-  const int barBaseY = 110;
-  for (int i = 0; i < miniTotal; ++i) {
-    const int val = specStats[i].dutyPercent;
-    const int h = max(1, val * 32 / 100);
-    const int x = 4 + i * 9;
-    display.fillRect(x, barBaseY - h, 7, h, specThermalColor(val));
-  }
-  drawFooter("Back", lastSpectrogramCsvOk ? "Saved" : "Save");
-  return;
-#endif
 
   const int total = specTotalChannels();
   const int base = specBandBase();
