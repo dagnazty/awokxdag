@@ -158,7 +158,7 @@ void drawClientSniffer() {
   }
   if (clientCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(40, 145);
+    display.setCursor(scaleX(40), scaleY(145));
     display.print("Listening for clients...");
   }
   drawReconResultFooter("Home", "Save", clientCount);

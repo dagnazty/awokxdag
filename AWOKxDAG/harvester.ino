@@ -245,39 +245,39 @@ void drawHarvester() {
   display.setTextSize(2);
   display.setTextColor((complete || harvestPmkidCount) ? kGood : kAccent,
                        kBackground);
-  display.setCursor(6, 52);
+  display.setCursor(scaleX(6), scaleY(52));
   display.printf("%d HS  %lu PM", complete,
                  static_cast<unsigned long>(harvestPmkidCount));
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 88);
+  display.setCursor(scaleX(6), scaleY(88));
   display.printf("APs seen:      %d", harvestApCount);
-  display.setCursor(6, 102);
+  display.setCursor(scaleX(6), scaleY(102));
   display.printf("EAPOL frames:  %lu",
                  static_cast<unsigned long>(harvestEapolCount));
-  display.setCursor(6, 116);
+  display.setCursor(scaleX(6), scaleY(116));
   display.printf("Frames to SD:  %lu",
                  static_cast<unsigned long>(harvestFramesWritten));
-  display.setCursor(6, 130);
+  display.setCursor(scaleX(6), scaleY(130));
   display.printf("Complete 4-way: %d", complete);
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 150);
+  display.setCursor(scaleX(6), scaleY(150));
   display.print("Last SSID: ");
   display.print(clipped(harvestLastSsid.length() ? harvestLastSsid : "-", 26));
 
-  display.drawFastHLine(6, 170, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(170), scaleX(228), kPanel);
   display.setTextColor(harvestFileOpen ? kAccent : kWarn, kBackground);
-  display.setCursor(6, 180);
+  display.setCursor(scaleX(6), scaleY(180));
   display.print(harvestFileOpen ? "SD: harvest.pcap + pmkid"
                                 : "SD unavailable; not saving");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 200);
+  display.setCursor(scaleX(6), scaleY(200));
   display.print("Passive: no deauth is sent. Only");
-  display.setCursor(6, 212);
+  display.setCursor(scaleX(6), scaleY(212));
   display.print("handshakes already in the air are");
-  display.setCursor(6, 224);
+  display.setCursor(scaleX(6), scaleY(224));
   display.print("captured. Authorized testing only.");
   drawFooter("Back", "Reset");
 }

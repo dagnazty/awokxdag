@@ -330,7 +330,7 @@ void drawBleIntel() {
   }
   if (bleIntelCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 145);
+    display.setCursor(scaleX(20), scaleY(145));
     display.print("Scanning BLE ecosystem frames...");
   }
   drawReconResultFooter("Back", lastBleIntelCsvOk ? "Saved" : "Save", bleIntelCount);

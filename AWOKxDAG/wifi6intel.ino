@@ -309,7 +309,7 @@ void drawWifi6Intel() {
   }
   if (wifi6ApCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 130);
+    display.setCursor(scaleX(20), scaleY(130));
     display.print("Listening for 802.11ax...");
   }
   if (pages > 1) {

@@ -161,7 +161,7 @@ void drawProbeIntel() {
   }
   if (probeSsidCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 145);
+    display.setCursor(scaleX(20), scaleY(145));
     display.print("Listening for probe requests...");
   }
   drawReconResultFooter("Back", lastProbeIntelCsvOk ? "Saved" : "Save", probeSsidCount);

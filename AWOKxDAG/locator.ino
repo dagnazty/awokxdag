@@ -24,7 +24,7 @@ void drawLocator() {
   const bool found = locatorRssi > -127;
   display.setTextSize(3);
   display.setTextColor(found ? signalColor(locatorRssi) : kMuted, kBackground);
-  display.setCursor(30, 52);
+  display.setCursor(scaleX(30), scaleY(52));
   if (found) {
     display.printf("%ld", static_cast<long>(locatorRssi));
     display.setTextSize(1);
@@ -37,45 +37,46 @@ void drawLocator() {
 #ifdef AWOK_MINI_DISPLAY
   display.bar(96, "Proximity", found ? constrain(locatorRssi, -90, -30) + 90 : 0, 60);
 #else
-  const int barLeft = 12;
-  const int barWidth = 216;
-  display.drawRect(barLeft, 96, barWidth, 22, kMuted);
+  const int barLeft = scaleX(12);
+  const int barWidth = scaleX(216);
+  display.drawRect(barLeft, scaleY(96), barWidth, scaleY(22), kMuted);
   if (found) {
     const int fill =
         map(constrain(locatorRssi, -90, -30), -90, -30, 0, barWidth - 2);
-    display.fillRect(barLeft + 1, 97, fill, 20, signalColor(locatorRssi));
+    display.fillRect(barLeft + 1, scaleY(97), fill, scaleY(20),
+                     signalColor(locatorRssi));
   }
 
 #endif
   display.setTextSize(2);
   if (!found) {
     display.setTextColor(kWarn, kBackground);
-    display.setCursor(60, 132);
+    display.setCursor(scaleX(60), scaleY(132));
     display.print("SEARCHING");
   } else if (locatorTrend > 0) {
     display.setTextColor(kGood, kBackground);
-    display.setCursor(70, 132);
+    display.setCursor(scaleX(70), scaleY(132));
     display.print("WARMER");
   } else if (locatorTrend < 0) {
     display.setTextColor(kBad, kBackground);
-    display.setCursor(78, 132);
+    display.setCursor(scaleX(78), scaleY(132));
     display.print("COLDER");
   } else {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(94, 132);
+    display.setCursor(scaleX(94), scaleY(132));
     display.print("HOLD");
   }
 
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 168);
+  display.setCursor(scaleX(6), scaleY(168));
   display.print("BSSID: ");
   display.print(selectedWifi.bssid.length() ? selectedWifi.bssid : "unknown");
-  display.setCursor(6, 182);
+  display.setCursor(scaleX(6), scaleY(182));
   display.printf("Channel %ld %sG",
                  static_cast<long>(selectedWifi.channel),
                  bandLabel(selectedWifi.channel));
-  display.setCursor(6, 196);
+  display.setCursor(scaleX(6), scaleY(196));
   if (locatorBest > -127) {
     display.printf("Best: %ld dBm   seen %lu / missed %lu",
                    static_cast<long>(locatorBest),
@@ -348,25 +349,25 @@ void drawFleetHunt() {
 
   display.setTextSize(1);
   display.setTextColor(kForeground, kBackground);
-  display.setCursor(2, 90);
+  display.setCursor(scaleX(2), scaleY(90));
   if (huntSolved) {
     display.printf("%.1fm %ddeg %s", huntTargetDist, static_cast<int>(huntTargetBearing), compassHeadingStr(huntTargetBearing));
-    display.setCursor(2, 100);
+    display.setCursor(scaleX(2), scaleY(100));
     display.printf("%.4f,%.4f", huntTargetLat, huntTargetLon);
-    display.setCursor(2, 110);
+    display.setCursor(scaleX(2), scaleY(110));
     display.printf("Pts:%d %ddBm", huntPointCount, huntLatestRssi);
   } else {
-    display.setCursor(10, 96);
+    display.setCursor(scaleX(10), scaleY(96));
     display.setTextColor(kWarn, kBackground);
     display.print(gpsHasFix() ? "COLLECTING..." : "NO GPS FIX");
-    display.setCursor(2, 110);
+    display.setCursor(scaleX(2), scaleY(110));
     display.setTextColor(kMuted, kBackground);
     display.printf("RSSI: %d dBm", huntLatestRssi);
   }
 #else
-  const int cx = 120;
-  const int cy = 110;
-  const int radius = 54;
+  const int cx = scaleX(120);
+  const int cy = scaleY(110);
+  const int radius = scaleX(54);  // uniform scale keeps the radar circular
 
   // Radar scope rings
   display.drawCircle(cx, cy, radius, kMuted);
@@ -405,7 +406,7 @@ void drawFleetHunt() {
   if (huntSolved) {
     display.setTextSize(2);
     display.setTextColor(kGood, kBackground);
-    display.setCursor(20, 180);
+    display.setCursor(scaleX(20), scaleY(180));
     display.printf("%.1fm  %d\xF7 %s",
                    huntTargetDist,
                    static_cast<int>(huntTargetBearing),
@@ -413,10 +414,10 @@ void drawFleetHunt() {
 
     display.setTextSize(1);
     display.setTextColor(kForeground, kBackground);
-    display.setCursor(14, 204);
+    display.setCursor(scaleX(14), scaleY(204));
     display.printf("Coords: %.6f, %.6f", huntTargetLat, huntTargetLon);
 
-    display.setCursor(14, 218);
+    display.setCursor(scaleX(14), scaleY(218));
     display.setTextColor(kMuted, kBackground);
     display.printf("Conf: \xF1%.1fm | %ddBm | %d pt(s)",
                    huntTargetConf,
@@ -425,12 +426,12 @@ void drawFleetHunt() {
   } else {
     display.setTextSize(2);
     display.setTextColor(kWarn, kBackground);
-    display.setCursor(44, 184);
+    display.setCursor(scaleX(44), scaleY(184));
     display.print(gpsHasFix() ? "COLLECTING..." : "NO GPS FIX");
 
     display.setTextSize(1);
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 212);
+    display.setCursor(scaleX(20), scaleY(212));
     display.print(gpsHasFix() ? "Sampling multi-node signal..." : "Waiting for satellites for trilateration");
   }
 

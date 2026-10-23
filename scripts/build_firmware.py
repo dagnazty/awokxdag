@@ -63,6 +63,7 @@ PROFILES = {
     "halehound-nm-rf-hat": (CLASSIC_FQBN, "AWOK_HALEHOUND_NM_RF_HAT"),
     "cardputer-v11": (CARDPUTER_V11_FQBN, "AWOK_CARDPUTER_V11"),
     "dual-c5-touch": (C5_FQBN, "AWOK_DUAL_C5_TOUCH"),
+    "pancake-c5": (C5_FQBN, "PANCAKE_C5"),
     "dual-c5-mini": (C5_FQBN, "AWOK_DUAL_C5_MINI"),
     "nm-cyd-c5": (NM_CYD_C5_FQBN, "AWOK_NM_CYD_C5"),
     "dual-esp32-touch-v1": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V1"),
