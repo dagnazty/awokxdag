@@ -225,15 +225,16 @@ bool topoGraphTap(int x, int y) {
 
 void drawTopoPopup(int idx) {
   const TopoAp& ap = topoAps[idx];
-  display.fillRect(kTopoPopupX, kTopoPopupY, kTopoPopupW, kTopoPopupH, kPanel);
-  display.drawRect(kTopoPopupX, kTopoPopupY, kTopoPopupW, kTopoPopupH, kAccent);
+  // Design-grid overlay; scaled so it sits below the header and fills the width.
+  display.fillRect(scaleX(kTopoPopupX), scaleY(kTopoPopupY), scaleX(kTopoPopupW), scaleY(kTopoPopupH), kPanel);
+  display.drawRect(scaleX(kTopoPopupX), scaleY(kTopoPopupY), scaleX(kTopoPopupW), scaleY(kTopoPopupH), kAccent);
   display.setTextColor(kAccent, kPanel);
-  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 3);
+  display.setCursor(scaleX(kTopoPopupX + 4), scaleY(kTopoPopupY + 3));
   display.print(ap.ssid[0] ? clipped(ap.ssid, 36) : String("<hidden>"));
   display.setTextColor(kForeground, kPanel);
-  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 15);
+  display.setCursor(scaleX(kTopoPopupX + 4), scaleY(kTopoPopupY + 15));
   display.print(macToString(ap.bssid));
-  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 27);
+  display.setCursor(scaleX(kTopoPopupX + 4), scaleY(kTopoPopupY + 27));
   display.print("ch ");
   display.print(ap.channel);
   display.print("  ");
@@ -241,14 +242,14 @@ void drawTopoPopup(int idx) {
   display.print("  ");
   display.print(ap.rssi);
   display.print("dBm");
-  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 39);
+  display.setCursor(scaleX(kTopoPopupX + 4), scaleY(kTopoPopupY + 39));
   display.setTextColor(topoSecurityWarn(ap.security) ? kWarn : kMuted, kPanel);
   display.print(topoSecurityLabel(ap.security));
   display.setTextColor(kMuted, kPanel);
   display.print("   ");
   display.print(ap.clientCount);
   display.print(" cli");
-  display.setCursor(kTopoPopupX + 4, kTopoPopupY + 50);
+  display.setCursor(scaleX(kTopoPopupX + 4), scaleY(kTopoPopupY + 50));
   display.print("tap away to clear");
 }
 

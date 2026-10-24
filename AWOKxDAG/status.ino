@@ -18,18 +18,18 @@ void drawStatus() {
   drawHeader("STATUS", "device health");
   display.setTextSize(1);
 
-  int y = 50;
+  int y = 50;             // design-space cursor row (scaled at each setCursor)
   const int step = 16;
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print("Uptime: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(uptimeString());
   y += step;
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print("Power: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   if (AwokPins::kBatteryAdc >= 0) {
@@ -44,21 +44,21 @@ void drawStatus() {
   y += step;
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print("Free heap: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.printf("%u KB", static_cast<unsigned>(ESP.getFreeHeap() / 1024));
   y += step;
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print("Chip temp: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.printf("%.1f C", temperatureRead());
   y += step;
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print("SD card: ");
   display.setTextColor(sdReady ? ILI9341_WHITE : kWarn, kBackground);
   if (sdReady) {
@@ -72,7 +72,7 @@ void drawStatus() {
   y += step;
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print("GPS: ");
   display.setTextColor(gpsHasFix() ? kGood : kMuted, kBackground);
   if (gpsHasFix()) {
@@ -84,20 +84,20 @@ void drawStatus() {
 
   if (gpsHasFix()) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(6, y);
+    display.setCursor(scaleX(6), scaleY(y));
     display.printf("  %.5f, %.5f", gps.location.lat(), gps.location.lng());
     y += step;
   }
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print("Wi-Fi MAC: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(WiFi.macAddress());
   y += step;
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, y);
+  display.setCursor(scaleX(6), scaleY(y));
   display.print(String("Firmware: AxD (") + AwokPins::kChipLabel + ")");
 
   drawThreeButtonFooter("Home", "Settings", "Files");
@@ -111,7 +111,7 @@ void updateStatus() {
 }
 
 void handleStatusTouch(int x, int y) {
-  if (y < kFooterTop) return;
+  if (y < kFooterTopDesign) return;
   if (x < 80) {
     drawHome();
   } else if (x < 160) {

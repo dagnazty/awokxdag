@@ -291,7 +291,7 @@ void drawSecurityAudit() {
   }
   if (auditCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(30, 145);
+    display.setCursor(scaleX(30), scaleY(145));
     display.print("Listening for beacons...");
   }
   drawReconResultFooter("Back", lastAuditCsvOk ? "Saved" : "Save", auditCount);

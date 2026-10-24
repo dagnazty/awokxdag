@@ -141,7 +141,7 @@ void drawHiddenReveal() {
   }
   if (hiddenCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(30, 145);
+    display.setCursor(scaleX(30), scaleY(145));
     display.print("Listening for hidden APs...");
   }
   drawReconResultFooter("Back", nullptr, hiddenCount);

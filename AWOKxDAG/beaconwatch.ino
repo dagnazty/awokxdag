@@ -77,39 +77,39 @@ void drawBeaconWatch() {
                                               : "watching for fake-AP floods");
   display.setTextSize(2);
   display.setTextColor(beaconWatchAlert ? kBad : kGood, kBackground);
-  display.setCursor(6, 52);
+  display.setCursor(scaleX(6), scaleY(52));
   display.print(beaconWatchAlert ? "FLOOD" : "CLEAR");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 90);
+  display.setCursor(scaleX(6), scaleY(90));
   display.printf("Distinct APs/win: %lu%s",
                  static_cast<unsigned long>(beaconWatchRate),
                  beaconWatchRate >= kBeaconWatchWindowSet ? "+" : "");
-  display.setCursor(6, 104);
+  display.setCursor(scaleX(6), scaleY(104));
   display.printf("Peak/win: %lu   thr %lu",
                  static_cast<unsigned long>(beaconWatchPeak),
                  static_cast<unsigned long>(kBeaconFloodThreshold));
-  display.setCursor(6, 118);
+  display.setCursor(scaleX(6), scaleY(118));
   display.printf("Total beacons: %lu",
                  static_cast<unsigned long>(beaconWatchTotal));
-  display.setCursor(6, 132);
+  display.setCursor(scaleX(6), scaleY(132));
   display.printf("Flood windows: %lu | ch %d",
                  static_cast<unsigned long>(beaconWatchAlerts),
                  kDeauthHopChannels[beaconWatchHopIndex]);
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 152);
+  display.setCursor(scaleX(6), scaleY(152));
   display.print("Last BSSID: ");
   display.print(macToString(beaconLastBssid));
 
-  display.drawFastHLine(6, 172, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(172), scaleX(228), kPanel);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 182);
+  display.setCursor(scaleX(6), scaleY(182));
   display.print("Many unique BSSIDs beaconing in a");
-  display.setCursor(6, 194);
+  display.setCursor(scaleX(6), scaleY(194));
   display.print("short window indicate a beacon");
-  display.setCursor(6, 206);
+  display.setCursor(scaleX(6), scaleY(206));
   display.print("flood / fake-AP spam. Passive.");
   drawFooter(beaconWatchActive ? "Stop" : "Back", "Reset");
 }

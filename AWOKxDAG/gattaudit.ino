@@ -126,7 +126,7 @@ void drawGattProgress(const char* stage) {
   drawHeader("GATT AUDIT", "active connection to selected device");
   display.setTextColor(kAccent, kBackground);
   display.setTextSize(2);
-  display.setCursor(18, 135);
+  display.setCursor(scaleX(18), scaleY(135));
   display.print(stage);
   display.present(false);
 }
@@ -173,11 +173,11 @@ void drawGattAudit() {
   drawHeader("GATT AUDIT", selectedBle.address);
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(7, 44);
+  display.setCursor(scaleX(7), scaleY(44));
   display.printf("%d chars  %d/%d%s  SD %s", gattCount, gattPage + 1, pages,
                  gattTruncated ? " +more" : "", gattSdOk ? "saved" : "--");
   if (gattMessage.length()) {
-    display.setCursor(7, 267);
+    display.setCursor(scaleX(7), scaleY(267));
     display.print(clipped(gattMessage, 39));
   }
   for (int row = 0; row < kMenuPerPage; ++row) {
@@ -193,7 +193,7 @@ void drawGattAudit() {
   }
   if (!gattCount) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(8, 108);
+    display.setCursor(scaleX(8), scaleY(108));
     display.print(gattMessage.length() ? clipped(gattMessage, 36)
                                        : "No characteristics discovered");
   }
@@ -427,17 +427,17 @@ void probeGattRead(int index) {
 }
 
 void handleGattTouch(int x, int y) {
-  if (y >= kMenuFirstY && y < kFooterTop) {
+  if (y >= kMenuFirstY && y < kFooterTopDesign) {
     const int row = (y - kMenuFirstY) / kMenuRowPitch;
     const int within = (y - kMenuFirstY) - row * kMenuRowPitch;
     if (row < kMenuPerPage && within < kMenuCardHeight)
       probeGattRead(gattPage * kMenuPerPage + row);
     return;
   }
-  if (y < kFooterTop) return;
+  if (y < kFooterTopDesign) return;
   const int pages = max(1, (gattCount + kMenuPerPage - 1) / kMenuPerPage);
   if (pages == 1) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       if (closeGattAudit()) drawBleDetail();
       else drawGattAudit();
     }

@@ -331,12 +331,12 @@ void drawCameraScan() {
   }
   if (cameraCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(30, 140);
+    display.setCursor(scaleX(30), scaleY(140));
     display.print("Scanning for cameras...");
-    display.setCursor(30, 156);
+    display.setCursor(scaleX(30), scaleY(156));
     display.print("Heuristic; not exhaustive");
     if (!radiosCoexist) {
-      display.setCursor(30, 172);
+      display.setCursor(scaleX(30), scaleY(172));
       display.print("BLE off: memory/startup check");
     }
   }

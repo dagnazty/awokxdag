@@ -89,40 +89,40 @@ void drawEvilPortal() {
              evilPortalActive ? "AP + captive portal up" : "stopped");
   display.setTextSize(2);
   display.setTextColor(evilPortalActive ? kBad : kMuted, kBackground);
-  display.setCursor(6, 54);
+  display.setCursor(scaleX(6), scaleY(54));
   display.print(evilPortalActive ? "SERVING" : "IDLE");
 
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 90);
+  display.setCursor(scaleX(6), scaleY(90));
   display.print("SSID: ");
   display.print(portalSsid.length() ? portalSsid : String(kPortalSsid));
-  display.setCursor(6, 104);
+  display.setCursor(scaleX(6), scaleY(104));
   display.print("Portal IP: ");
   display.print(evilPortalActive ? portalIp.toString() : String("-"));
-  display.setCursor(6, 118);
+  display.setCursor(scaleX(6), scaleY(118));
   display.printf("Clients: %d",
                  evilPortalActive ? WiFi.softAPgetStationNum() : 0);
   display.setTextColor(portalCredsCount ? kGood : kMuted, kBackground);
-  display.setCursor(6, 132);
+  display.setCursor(scaleX(6), scaleY(132));
   display.printf("Captured: %lu", static_cast<unsigned long>(portalCredsCount));
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 146);
+  display.setCursor(scaleX(6), scaleY(146));
   display.print("Last: ");
   display.print(lastPortalCred.length() ? clipped(lastPortalCred, 30)
                                         : String("none"));
 
-  display.drawFastHLine(6, 164, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(164), scaleX(228), kPanel);
   display.setTextColor(portalLogReady ? kAccent : kWarn, kBackground);
-  display.setCursor(6, 172);
+  display.setCursor(scaleX(6), scaleY(172));
   display.print(portalLogReady ? "SD: portal_creds.csv" : "SD unavailable");
   display.setTextColor(kBad, kBackground);
-  display.setCursor(6, 192);
+  display.setCursor(scaleX(6), scaleY(192));
   display.print("Authorized testing only.");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 208);
+  display.setCursor(scaleX(6), scaleY(208));
   display.print("Only stand this up against users");
-  display.setCursor(6, 220);
+  display.setCursor(scaleX(6), scaleY(220));
   display.print("who consented to the assessment.");
   drawFooter("Back", "Clear");
 }
