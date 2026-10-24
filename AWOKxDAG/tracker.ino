@@ -202,7 +202,7 @@ void drawTrackerScan() {
   }
   if (trackerCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(20, 145);
+    display.setCursor(scaleX(20), scaleY(145));
     display.print("Scanning for item trackers...");
   }
   drawReconResultFooter("Back", lastTrackerCsvOk ? "Saved" : "Save", trackerCount);
