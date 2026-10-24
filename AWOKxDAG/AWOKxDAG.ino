@@ -1,5 +1,6 @@
 // Arduino IDE selection.
-#if !defined(AWOK_DUAL_C5_TOUCH) && !defined(AWOK_DUAL_C5_MINI) && \
+#if !defined(AWOK_DUAL_C5_TOUCH) && !defined(PANCAKE_C5) && \
+    !defined(AWOK_DUAL_C5_MINI) && \
     !defined(AWOK_MARAUDER_MINI_V3) && \
     !defined(AWOK_NM_CYD_C5) && \
     !defined(AWOK_CYD_2432S028) && !defined(AWOK_HALEHOUND_E32R28T) && \
@@ -16,6 +17,7 @@
     !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V2) && \
     !defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V3) && !defined(AWOK_CARDPUTER_V11)
 //#define AWOK_DUAL_C5_TOUCH
+//#define PANCAKE_C5
 //#define AWOK_NM_CYD_C5
 #define AWOK_DUAL_C5_MINI
 //#define AWOK_DUAL_ESP32_TOUCH_V1
@@ -54,6 +56,10 @@ struct AwokHeadlessTouch {
   bool touched() { return false; }
   TS_Point getPoint() { return TS_Point(0, 0, 0); }
 } touch;
+#elif defined(PANCAKE_DISPLAY)
+AwokPancakeDisplay display(AwokPins::kDisplayDc, AwokPins::kDisplayCs,
+                           AwokPins::kDisplayReset);
+AwokCapTouch touch;  // FT6336 capacitive controller (I2C)
 #else
 #ifdef AWOK_CLASSIC_CYD
 #include "cyd_touch.h"
@@ -739,6 +745,7 @@ void drawButton(int x, int y, int w, int h, const String& label,
   display.button(x, y, w, h, label.c_str(), outline);
   return;
 #endif
+  x = scaleX(x); y = scaleY(y); w = scaleX(w); h = scaleY(h);
   display.drawRoundRect(x, y, w, h, 6, outline);
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.setTextSize(2);
@@ -754,29 +761,27 @@ void drawButton(int x, int y, int w, int h, const String& label,
 void drawHeader(const String& title, const String& detail) {
 #ifdef AWOK_MINI_DISPLAY
   display.header(title.c_str(), detail.c_str());
-  display.version(kVersion);
-  display.gps(gpsHasFix() ? 2 : (gpsCharsProcessed() > 10 ? 1 : 0));
   return;
 #endif
   display.fillRect(0, 0, kScreenWidth, kHeaderHeight, kPanel);
   display.setTextColor(kAccent, kPanel);
   display.setTextSize(2);
-  display.setCursor(8, 7);
+  display.setCursor(scaleX(8), scaleY(7));
   display.print(title);
   if (detail.length()) {
     display.setTextColor(ILI9341_WHITE, kPanel);
     display.setTextSize(1);
-    display.setCursor(8, 29);
+    display.setCursor(scaleX(8), scaleY(29));
     display.print(clipped(detail, 34));
   }
   // GPS fix indicator: green = fix, yellow = data but no fix, dim = no data.
   const uint16_t gpsColor =
       gpsHasFix() ? kGood
                   : (gpsCharsProcessed() > 10 ? kWarn : kMuted);
-  display.fillCircle(224, 10, 4, gpsColor);
+  display.fillCircle(scaleX(224), scaleY(10), 4, gpsColor);
   display.setTextColor(gpsColor, kPanel);
   display.setTextSize(1);
-  display.setCursor(202, 7);
+  display.setCursor(scaleX(202), scaleY(7));
   display.print("GPS");
 }
 
@@ -793,6 +798,7 @@ void drawSmallButton(int x, int y, int w, int h, const String& label,
   display.button(x, y, w, h, label.c_str(), outline);
   return;
 #endif
+  x = scaleX(x); y = scaleY(y); w = scaleX(w); h = scaleY(h);
   display.drawRoundRect(x, y, w, h, 5, outline);
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.setTextSize(1);
@@ -862,14 +868,14 @@ void drawMenuCard(int y, const String& title, const String& detail, uint16_t out
     display.print(detail);
   }
 #else
-  display.drawRoundRect(8, y, 224, kMenuCardHeight, 5, outline);
+  display.drawRoundRect(scaleX(8), scaleY(y), scaleX(224), scaleY(kMenuCardHeight), 5, outline);
   display.setTextSize(title.length() <= 17 ? 2 : 1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(16, y + 5);
+  display.setCursor(scaleX(16), scaleY(y + 5));
   display.print(clipped(title, 34));
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(16, y + 29);
+  display.setCursor(scaleX(16), scaleY(y + 29));
   display.print(clipped(detail, 34));
 #endif
 }
@@ -919,7 +925,7 @@ int reconResultFooterHit(int x, int count, bool hasAction) {
     reconResultPage = (reconResultPage + 1) % pages;
     return 2;
   }
-  if (x < kScreenWidth / 2) return 0;
+  if (x < kDesignWidth / 2) return 0;
   return hasAction ? 3 : 4;  // right slot: Action, or Home on a Back-only screen
 }
 
@@ -928,40 +934,40 @@ void drawAboutPage() {
   drawHeader("ABOUT", "AxD");
   display.setTextSize(2);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 52);
+  display.setCursor(scaleX(6), scaleY(52));
   display.print("AxD");
   display.setTextSize(1);
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 80);
+  display.setCursor(scaleX(6), scaleY(80));
   display.print(AwokPins::kDualBand ? "Dual-band Wi-Fi/BLE pentest toolkit"
                                   : "2.4 GHz Wi-Fi/BLE pentest toolkit");
-  display.setCursor(6, 92);
+  display.setCursor(scaleX(6), scaleY(92));
   display.print(AwokPins::kBoardLabel);
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 116);
+  display.setCursor(scaleX(6), scaleY(116));
   display.print("Author:  ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(kAuthor);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 130);
+  display.setCursor(scaleX(6), scaleY(130));
   display.print("Version: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(kVersion);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 144);
+  display.setCursor(scaleX(6), scaleY(144));
   display.print(AwokPins::kBoardLabel);
-  display.setCursor(6, 158);
+  display.setCursor(scaleX(6), scaleY(158));
   display.print("Storage: microSD at /awokxdag");
 
-  display.drawFastHLine(6, 176, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(176), scaleX(228), kPanel);
   display.setTextColor(kBad, kBackground);
-  display.setCursor(6, 186);
+  display.setCursor(scaleX(6), scaleY(186));
   display.print("Authorized testing only. You are");
-  display.setCursor(6, 198);
+  display.setCursor(scaleX(6), scaleY(198));
   display.print("responsible for how you use this.");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 218);
+  display.setCursor(scaleX(6), scaleY(218));
   display.print("Tap anywhere to go back.");
   drawFooter("Back", "Home");  // both return to the Home tiles (overlay: any tap)
 }
@@ -1063,8 +1069,11 @@ void drawBootScreen() {
   // XBM stores black source pixels as set bits. Painting those black over a
   // white canvas preserves the supplied white-on-black composition exactly.
   display.fillScreen(ILI9341_WHITE);
-  display.drawXBitmap(0, 0, kBootScreenBitmap, kBootScreenWidth,
-                      kBootScreenHeight, ILI9341_BLACK);
+  // The splash bitmap is authored at the 240x320 design size; centre it on the
+  // panel (identity on 240x320, a framed logo on the larger Pancake screen).
+  display.drawXBitmap((kScreenWidth - kBootScreenWidth) / 2,
+                      (kScreenHeight - kBootScreenHeight) / 2, kBootScreenBitmap,
+                      kBootScreenWidth, kBootScreenHeight, ILI9341_BLACK);
   display.present();  // setup() blocks on delay() next; show the splash now
 #endif
 }
@@ -1074,7 +1083,7 @@ void drawScanning(const String& kind) {
   drawHeader(kind + " SCAN", "passive discovery in progress");
   display.setTextColor(kAccent, kBackground);
   display.setTextSize(2);
-  display.setCursor(43, 135);
+  display.setCursor(scaleX(43), scaleY(135));
   display.print("Scanning...");
   // Show it now: the caller blocks on a synchronous scan before returning to
   // loop(), so the end-of-loop present() would be too late.
@@ -1111,7 +1120,7 @@ void drawWifiResults() {
   }
   if (wifiCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(52, 145);
+    display.setCursor(scaleX(52), scaleY(145));
     display.print("No access points found");
   }
   if (pages > 1) {
@@ -1132,14 +1141,14 @@ void drawSavedNetworks() {
 #endif
   display.setTextSize(1);
   for (int i = 0; i < savedCount; ++i) {
-    const int y = 48 + i * 22;
+    const int y = 48 + i * 22;  // design-space row top
     display.setTextColor(kAccent, kBackground);
-    display.setCursor(5, y);
+    display.setCursor(scaleX(5), scaleY(y));
     display.print(clipped(savedEntries[i].ssid.length() ? savedEntries[i].ssid
                                                         : "<hidden>",
                           24));
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(5, y + 11);
+    display.setCursor(scaleX(5), scaleY(y + 11));
     display.printf("%4ld dBm  ch%-3ld %s",
                    static_cast<long>(savedEntries[i].rssi),
                    static_cast<long>(savedEntries[i].channel),
@@ -1147,9 +1156,9 @@ void drawSavedNetworks() {
   }
   if (savedCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(43, 137);
+    display.setCursor(scaleX(43), scaleY(137));
     display.print("No saved networks yet");
-    display.setCursor(24, 153);
+    display.setCursor(scaleX(24), scaleY(153));
     display.print("Scan Wi-Fi, select one, then Save");
   }
   drawFooter("Home", "Wi-Fi Scan");
@@ -1191,7 +1200,7 @@ void drawBleResults() {
   }
   if (bleCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(54, 145);
+    display.setCursor(scaleX(54), scaleY(145));
     display.print("No advertisers found");
   }
   if (pages > 1) {
@@ -1209,40 +1218,40 @@ void drawBleDetail() {
   display.setTextSize(1);
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 50);
+  display.setCursor(scaleX(6), scaleY(50));
   display.print("Address: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(selectedBle.address);
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 66);
+  display.setCursor(scaleX(6), scaleY(66));
   display.print("Type: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(bleAddressTypeLabel(selectedBle.addressType));
 
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 82);
+  display.setCursor(scaleX(6), scaleY(82));
   display.printf("Signal: %ld dBm (%s)", static_cast<long>(selectedBle.rssi),
                  signalLabel(selectedBle.rssi));
-  display.setCursor(6, 98);
+  display.setCursor(scaleX(6), scaleY(98));
   if (selectedBle.hasTxPower) {
     display.printf("TX power: %ld dBm", static_cast<long>(selectedBle.txPower));
   } else {
     display.print("TX power: not advertised");
   }
-  display.setCursor(6, 114);
+  display.setCursor(scaleX(6), scaleY(114));
   display.printf("Connectable: %s   Scannable: %s",
                  selectedBle.connectable ? "yes" : "no",
                  selectedBle.scannable ? "yes" : "no");
-  display.setCursor(6, 130);
+  display.setCursor(scaleX(6), scaleY(130));
   display.printf("Advertisement bytes: %u", selectedBle.advertisementBytes);
 
-  display.drawFastHLine(6, 145, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(145), scaleX(228), kPanel);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 153);
+  display.setCursor(scaleX(6), scaleY(153));
   display.print("MANUFACTURER");
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 169);
+  display.setCursor(scaleX(6), scaleY(169));
   if (selectedBle.manufacturerId >= 0) {
     display.printf("Company ID: 0x%04lX",
                    static_cast<long>(selectedBle.manufacturerId));
@@ -1250,28 +1259,28 @@ void drawBleDetail() {
     display.print("Company ID: not advertised");
   }
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 185);
+  display.setCursor(scaleX(6), scaleY(185));
   display.print("Data: ");
   display.print(selectedBle.manufacturerDataHex.length()
                     ? clipped(selectedBle.manufacturerDataHex, 31)
                     : "not advertised");
 
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 205);
+  display.setCursor(scaleX(6), scaleY(205));
   display.print("SERVICE UUIDS");
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(6, 221);
+  display.setCursor(scaleX(6), scaleY(221));
   if (selectedBle.serviceUuids.length()) {
     display.print(clipped(selectedBle.serviceUuids, 37));
     if (selectedBle.serviceUuids.length() > 37) {
-      display.setCursor(6, 234);
+      display.setCursor(scaleX(6), scaleY(234));
       display.print(clipped(selectedBle.serviceUuids.substring(37), 37));
     }
   } else {
     display.print("None advertised");
   }
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 258);
+  display.setCursor(scaleX(6), scaleY(258));
   const char* hint = (selectedBle.flipperLike ? "Flipper-like service" : "");
   display.print(*hint ? "Flipper-like UUID; identity unverified"
                       : "Passive advertisement metadata only.");
@@ -1332,36 +1341,36 @@ void drawChannelMap() {
 
   if (wifiCount == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(43, 132);
+    display.setCursor(scaleX(43), scaleY(132));
     display.print("No channel data available");
-    display.setCursor(36, 149);
+    display.setCursor(scaleX(36), scaleY(149));
     display.print("Tap Scan to collect it now");
     drawFooter("Home", "Scan");
     return;
   }
 
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(5, 49);
+  display.setCursor(scaleX(5), scaleY(49));
   display.print("2.4 GHz access points per channel");
   int maximum24 = 1;
   for (int channel = 1; channel <= 14; ++channel) {
     maximum24 = max(maximum24, accessPointsOnChannel(channel));
   }
-  constexpr int kBase24 = 126;
-  display.drawFastHLine(4, kBase24, 232, kMuted);
+  constexpr int kBase24 = scaleY(126);
+  display.drawFastHLine(scaleX(4), kBase24, scaleX(232), kMuted);
   for (int channel = 1; channel <= 14; ++channel) {
     const int count = accessPointsOnChannel(channel);
-    const int height = count ? max(3, count * 55 / maximum24) : 1;
-    const int x = 4 + (channel - 1) * 16;
-    display.fillRect(x, kBase24 - height, 11, height,
-                     channelBarColor(count));
+    const int height = count ? max(3, count * 55 / maximum24) : 1;  // design px
+    const int x = 4 + (channel - 1) * 16;  // design x
+    display.fillRect(scaleX(x), kBase24 - scaleY(height), scaleX(11),
+                     scaleY(height), channelBarColor(count));
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(x + (channel < 10 ? 3 : 0), 130);
+    display.setCursor(scaleX(x + (channel < 10 ? 3 : 0)), scaleY(130));
     display.print(channel);
   }
 
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.setCursor(5, 151);
+  display.setCursor(scaleX(5), scaleY(151));
   if (!AwokPins::kDualBand) {
     display.print("This board supports 2.4 GHz only");
     drawFooter("Home", "Scan");
@@ -1400,26 +1409,26 @@ void drawChannelMap() {
     }
   }
 
-  constexpr int kBase5 = 243;
-  display.drawFastHLine(4, kBase5, 232, kMuted);
+  constexpr int kBase5 = scaleY(243);
+  display.drawFastHLine(scaleX(4), kBase5, scaleX(232), kMuted);
   if (channel5Count == 0) {
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(53, 202);
+    display.setCursor(scaleX(53), scaleY(202));
     display.print("No 5 GHz APs detected");
   } else {
     int maximum5 = 1;
     for (int i = 0; i < channel5Count; ++i) {
       maximum5 = max(maximum5, counts5[i]);
     }
-    const int spacing = 230 / channel5Count;
-    const int barWidth = min(18, spacing - 4);
+    const int spacing = 230 / channel5Count;         // design x-span
+    const int barWidth = min(18, spacing - 4);        // design width
     for (int i = 0; i < channel5Count; ++i) {
-      const int height = max(3, counts5[i] * 62 / maximum5);
-      const int x = 5 + i * spacing + (spacing - barWidth) / 2;
-      display.fillRect(x, kBase5 - height, barWidth, height,
-                       channelBarColor(counts5[i]));
+      const int height = max(3, counts5[i] * 62 / maximum5);  // design height
+      const int x = 5 + i * spacing + (spacing - barWidth) / 2;  // design x
+      display.fillRect(scaleX(x), kBase5 - scaleY(height), scaleX(barWidth),
+                       scaleY(height), channelBarColor(counts5[i]));
       display.setTextColor(kMuted, kBackground);
-      display.setCursor(x, 248);
+      display.setCursor(scaleX(x), scaleY(248));
       display.print(channels5[i]);
     }
   }
@@ -1454,11 +1463,41 @@ String auditRecommendation(const WifiEntry& selected) {
   return "No obvious issue in advertised metadata.";
 }
 
-void drawAuditFinding(int y, uint16_t color, const String& text) {
-  display.fillCircle(9, y + 3, 3, color);
+// Size-1 characters that fit from design-x `x` to the right edge of the panel
+// (the built-in font is 6 px per character). Lets text fill the actual display.
+int charsForWidth(int x) {
+  return max(1, (kScreenWidth - scaleX(x) - scaleX(4)) / 6);
+}
+
+// Word-wrap `text` from design (x, y) across up to `maxLines` lines, each
+// stepping down `stepDesign` design px. Line width fills the panel (see
+// charsForWidth), so on the wider Pancake screen long text shows in full,
+// wrapping under the first row when it still overflows. Returns lines drawn.
+int drawWrappedText(int x, int y, uint16_t color, const String& text,
+                    int maxLines, int stepDesign) {
   display.setTextColor(color, kBackground);
-  display.setCursor(17, y);
-  display.print(clipped(text, 36));
+  const int perLine = charsForWidth(x);
+  int line = 0, start = 0;
+  const int n = text.length();
+  while (start < n && line < maxLines) {
+    int end = (n - start > perLine) ? start + perLine : n;
+    if (end < n) {  // break on a word boundary when possible
+      int space = end;
+      while (space > start && text.charAt(space) != ' ') --space;
+      if (space > start) end = space;
+    }
+    display.setCursor(scaleX(x), scaleY(y + line * stepDesign));
+    display.print(text.substring(start, end));
+    start = end;
+    while (start < n && text.charAt(start) == ' ') ++start;
+    ++line;
+  }
+  return line;
+}
+
+void drawAuditFinding(int y, uint16_t color, const String& text) {
+  display.fillCircle(scaleX(9), scaleY(y + 3), 3, color);
+  drawWrappedText(17, y, color, text, 2, 9);
 }
 
 void drawWifiAudit() {
@@ -1468,27 +1507,27 @@ void drawWifiAudit() {
              selectedWifi.ssid.length() ? selectedWifi.ssid : "<hidden>");
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 49);
+  display.setCursor(scaleX(6), scaleY(49));
   display.print("BSSID: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(selectedWifi.bssid.length() ? selectedWifi.bssid : "unknown");
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 64);
+  display.setCursor(scaleX(6), scaleY(64));
   display.print("Security: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(authLongLabel(selectedWifi.auth));
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 79);
+  display.setCursor(scaleX(6), scaleY(79));
   display.printf("Signal: %ld dBm (%s)", static_cast<long>(selectedWifi.rssi),
                  signalLabel(selectedWifi.rssi));
-  display.setCursor(6, 94);
+  display.setCursor(scaleX(6), scaleY(94));
   display.printf("Channel: %ld / %s GHz", static_cast<long>(selectedWifi.channel),
                  bandLabel(selectedWifi.channel));
-  display.setCursor(6, 109);
+  display.setCursor(scaleX(6), scaleY(109));
   display.printf("Saved: %s", isSaved(selectedWifi) ? "yes" : "no");
-  display.drawFastHLine(6, 124, 228, kPanel);
+  display.drawFastHLine(scaleX(6), scaleY(124), scaleX(228), kPanel);
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 132);
+  display.setCursor(scaleX(6), scaleY(132));
   display.print("PASSIVE FINDINGS");
 
   if (selectedWifi.auth == WIFI_AUTH_OPEN) {
@@ -1522,17 +1561,30 @@ void drawWifiAudit() {
     drawAuditFinding(200, kGood, "OK: network name is advertised");
   }
   display.setTextColor(kAccent, kBackground);
-  display.setCursor(6, 221);
+  display.setCursor(scaleX(6), scaleY(221));
   display.print("RECOMMEND: ");
+  // Fill the line after the label, then wrap the remainder underneath.
+  const String rec = auditRecommendation(selectedWifi);
+  const int firstCap = max(1, charsForWidth(6) - 11);  // "RECOMMEND: " = 11 chars
   display.setTextColor(ILI9341_WHITE, kBackground);
-  display.print(clipped(auditRecommendation(selectedWifi), 27));
+  if (static_cast<int>(rec.length()) <= firstCap) {
+    display.print(rec);
+  } else {
+    int brk = firstCap;
+    while (brk > 0 && rec.charAt(brk) != ' ') --brk;
+    if (brk == 0) brk = firstCap;
+    display.print(rec.substring(0, brk));
+    int rest = brk;
+    while (rest < static_cast<int>(rec.length()) && rec.charAt(rest) == ' ') ++rest;
+    drawWrappedText(6, 233, ILI9341_WHITE, rec.substring(rest), 1, 9);
+  }
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 242);
+  display.setCursor(scaleX(6), scaleY(242));
   display.print("Metadata only; no connection attempted.");
   if (auditStatus.length()) {
     display.setTextColor(kAccent, kBackground);
-    display.setCursor(6, 257);
-    display.print(clipped(auditStatus, 37));
+    display.setCursor(scaleX(6), scaleY(257));
+    display.print(clipped(auditStatus, charsForWidth(6)));
   }
   drawFiveButtonFooter("Back", "Signal",
                        isSaved(selectedWifi) ? "Remove" : "Save", "Deauth",
@@ -1610,12 +1662,12 @@ void drawWifiSignalMonitor() {
              selectedWifi.ssid.length() ? selectedWifi.ssid : "<hidden>");
   display.setTextSize(1);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 49);
+  display.setCursor(scaleX(6), scaleY(49));
   display.print("BSSID: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
   display.print(selectedWifi.bssid);
   display.setTextColor(kMuted, kBackground);
-  display.setCursor(6, 64);
+  display.setCursor(scaleX(6), scaleY(64));
   if (signalSampleCount > 0 &&
       signalSamples[signalSampleCount - 1] > -127) {
     const int32_t latest = signalSamples[signalSampleCount - 1];
@@ -1624,7 +1676,7 @@ void drawWifiSignalMonitor() {
   } else {
     display.print("Latest: waiting for target");
   }
-  display.setCursor(6, 79);
+  display.setCursor(scaleX(6), scaleY(79));
   display.printf("Channel %ld | samples %d | misses %d",
                  static_cast<long>(selectedWifi.channel), signalSampleCount,
                  signalMisses);
@@ -1632,15 +1684,15 @@ void drawWifiSignalMonitor() {
 #ifdef AWOK_MINI_DISPLAY
   display.graph(96, signalSamples, signalSampleCount);
 #else
-  constexpr int kGraphLeft = 34;
-  constexpr int kGraphRight = 232;
-  constexpr int kGraphTop = 96;
-  constexpr int kGraphBottom = 242;
+  const int kGraphLeft = scaleX(34);
+  const int kGraphRight = scaleX(232);
+  const int kGraphTop = scaleY(96);
+  const int kGraphBottom = scaleY(242);
   const int levels[] = {-40, -60, -80, -100};
   for (int level : levels) {
     const int y = map(level, -100, -30, kGraphBottom, kGraphTop);
     display.setTextColor(kMuted, kBackground);
-    display.setCursor(4, y - 3);
+    display.setCursor(scaleX(4), y - scaleY(3));
     display.print(level);
     display.drawFastHLine(kGraphLeft, y, kGraphRight - kGraphLeft, kPanel);
   }
@@ -1655,12 +1707,12 @@ void drawWifiSignalMonitor() {
       previousY = -1;
       continue;
     }
-    const int x = kGraphLeft + 3 +
-                  i * (kGraphRight - kGraphLeft - 6) /
+    const int x = kGraphLeft + scaleX(3) +
+                  i * (kGraphRight - kGraphLeft - scaleX(6)) /
                       (kSignalSampleCount - 1);
     const int constrainedRssi = constrain(signalSamples[i], -100, -30);
-    const int y = map(constrainedRssi, -100, -30, kGraphBottom - 3,
-                      kGraphTop + 3);
+    const int y = map(constrainedRssi, -100, -30, kGraphBottom - scaleY(3),
+                      kGraphTop + scaleY(3));
     const uint16_t color = signalColor(signalSamples[i]);
     if (previousX >= 0) display.drawLine(previousX, previousY, x, y, color);
     display.fillCircle(x, y, 2, color);
@@ -1670,7 +1722,7 @@ void drawWifiSignalMonitor() {
 
 #endif
   display.setTextColor(signalSdLogReady ? kAccent : kMuted, kBackground);
-  display.setCursor(6, 258);
+  display.setCursor(scaleX(6), scaleY(258));
   display.print(signalSdLogReady ? "SD logging: latest_wifi_signal.csv"
                                  : "SD logging unavailable; graph still works");
   drawThreeButtonFooter("Back", "Restart", "Locate");
@@ -2137,9 +2189,9 @@ void showToolMemoryError(const char* tool) {
   drawHeader("MEMORY LOW", tool);
   display.setTextSize(1);
   display.setTextColor(kWarn, kBackground);
-  display.setCursor(6, 60);
+  display.setCursor(scaleX(6), scaleY(60));
   display.print("Tool could not start.");
-  display.setCursor(6, 80);
+  display.setCursor(scaleX(6), scaleY(80));
   display.print("Check Serial Monitor.");
   drawFooter("Back", "Home");  // overlay: any tap returns to the Home tiles
 }
@@ -2153,9 +2205,9 @@ void showRadioError(const char* message) {
   drawHeader("RADIO ERROR", message);
   display.setTextSize(1);
   display.setTextColor(kWarn, kBackground);
-  display.setCursor(6, 60);
+  display.setCursor(scaleX(6), scaleY(60));
   display.print("Radio initialization failed.");
-  display.setCursor(6, 80);
+  display.setCursor(scaleX(6), scaleY(80));
   display.print("Check Serial Monitor for details.");
   drawFooter("Back", "Home");  // overlay: any tap returns to the Home tiles
 }
@@ -2608,6 +2660,20 @@ void initializeDisplayAndTouch() {
   }
 #endif
   display.setTextWrap(false);
+#elif defined(PANCAKE_DISPLAY)
+  // Pancake C5: ST7796 on the FSPI bus, FT6336 capacitive touch on I2C. Touch
+  // has no SPI chip select, so there is no CS juggling as on the XPT2046 path.
+  pinMode(AwokPins::kDisplayCs, OUTPUT);
+  pinMode(AwokPins::kSdCs, OUTPUT);
+  digitalWrite(AwokPins::kDisplayCs, HIGH);
+  digitalWrite(AwokPins::kSdCs, HIGH);
+  SPI.begin(AwokPins::kSpiSck, AwokPins::kSpiMiso, AwokPins::kSpiMosi, -1);
+  pinMode(AwokPins::kBacklight, OUTPUT);
+  digitalWrite(AwokPins::kBacklight, AwokPins::kBacklightOn ? HIGH : LOW);
+  display.begin(27000000);
+  display.setRotation(0);
+  display.setTextWrap(false);
+  touch.begin();  // Wire + FT6336 on the I2C bus
 #else
   pinMode(AwokPins::kDisplayCs, OUTPUT);
   pinMode(AwokPins::kTouchCs, OUTPUT);
