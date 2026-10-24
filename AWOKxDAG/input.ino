@@ -31,6 +31,17 @@ bool readTouch(int& screenX, int& screenY) {
 #ifdef AWOK_MINI_DISPLAY
   return miniButtonDown(AwokPins::kButtonCenter) &&
          display.selection(screenX, screenY);
+#elif defined(PANCAKE_CAP_TOUCH)
+  // Drawing scales design coordinates up to the 320x480 panel; touch does the
+  // inverse, mapping FT6336 panel coordinates back into the 240x320 design grid
+  // so every touch-zone comparison stays authored in design units.
+  uint16_t panelX = 0, panelY = 0;
+  if (!touch.read(panelX, panelY)) return false;
+  screenX = constrain(int(panelX) * kDesignWidth / AwokST7796::kPanelW, 0,
+                      kDesignWidth - 1);
+  screenY = constrain(int(panelY) * kDesignHeight / AwokST7796::kPanelH, 0,
+                      kDesignHeight - 1);
+  return true;
 #else
   if (!touch.touched()) return false;
   TS_Point point = touch.getPoint();
@@ -161,7 +172,7 @@ void dispatchTouch(int x, int y) {
       drawHome();
       return;
     }
-    if (y < kFooterTop) {
+    if (y < kFooterTopDesign) {
       const int start = homePage * kHomeTilesPerPage;
       const int rows = min(kHomeTilesPerPage, kHomeTileCount - start);
       for (int row = 0; row < rows; ++row) {
@@ -176,10 +187,10 @@ void dispatchTouch(int x, int y) {
     // Footer paging mirrors drawHome: Prev on the left of later pages, Next on
     // the right while more pages remain. The version-label slots do nothing.
     const int pages = homePageCount();
-    if (homePage > 0 && x < kScreenWidth / 2) {
+    if (homePage > 0 && x < kDesignWidth / 2) {
       homePage -= 1;
       drawHome();
-    } else if (homePage + 1 < pages && x >= kScreenWidth / 2) {
+    } else if (homePage + 1 < pages && x >= kDesignWidth / 2) {
       homePage += 1;
       drawHome();
     }
@@ -200,7 +211,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kRecon) {
-    if (y < kFooterTop) {
+    if (y < kFooterTopDesign) {
       const int start = reconPage * kMenuPerPage;
       for (int row = 0; row < kMenuPerPage; ++row) {
         const int position = start + row;
@@ -245,7 +256,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kMonitor) { handleMonitorTouch(x, y); return; }
-  if (currentView == View::kWifi && y >= kMenuFirstY && y < kFooterTop) {
+  if (currentView == View::kWifi && y >= kMenuFirstY && y < kFooterTopDesign) {
     const int row = (y - kMenuFirstY) / kMenuRowPitch;
     const int within = (y - kMenuFirstY) - row * kMenuRowPitch;
     const int index = wifiPage * kMenuPerPage + row;
@@ -259,7 +270,7 @@ void dispatchTouch(int x, int y) {
     if (index < savedCount) openWifiAudit(savedEntries[index], View::kSaved);
     return;
   }
-  if (currentView == View::kBle && y >= kMenuFirstY && y < kFooterTop) {
+  if (currentView == View::kBle && y >= kMenuFirstY && y < kFooterTopDesign) {
     const int row = (y - kMenuFirstY) / kMenuRowPitch;
     const int within = (y - kMenuFirstY) - row * kMenuRowPitch;
     const int index = within < kMenuCardHeight ? bleResultIndex(row) : -1;
@@ -276,7 +287,7 @@ void dispatchTouch(int x, int y) {
     }
     return;
   }
-  if (currentView == View::kAttacks && y < kFooterTop) {
+  if (currentView == View::kAttacks && y < kFooterTopDesign) {
     for (int row = 0; row < kAttackCount; ++row) {
       const int by = kMenuFirstY + row * kMenuRowPitch;
       if (y >= by && y < by + kMenuCardHeight) {
@@ -292,17 +303,19 @@ void dispatchTouch(int x, int y) {
   if (currentView == View::kTopologyMap) {
     extern bool topoGraphMode;
     extern bool topoGraphTap(int, int);
-    if (y < kFooterTop) {
-      if (topoGraphMode && y >= kHeaderHeight) {
-        topoGraphTap(x, y);
+    if (y < kFooterTopDesign) {
+      if (topoGraphMode && y >= kHeaderHeightDesign) {
+        // The graph lays out in physical panel space (kScreenWidth/kHeaderHeight
+        // /kFooterTopDesign), so hit-test with physical coordinates, not design ones.
+        topoGraphTap(scaleX(x), scaleY(y));
         drawTopologyMap();
       }
       return;
     }
-    if (x < kScreenWidth / 3) {
+    if (x < kDesignWidth / 3) {
       stopTopologyMap();
       drawReconMenu();
-    } else if (x < (kScreenWidth * 2) / 3) {
+    } else if (x < (kDesignWidth * 2) / 3) {
       topoGraphMode = !topoGraphMode;
       drawTopologyMap();
     } else {
@@ -311,10 +324,10 @@ void dispatchTouch(int x, int y) {
     }
     return;
   }
-  if (y < kFooterTop) return;
+  if (y < kFooterTopDesign) return;
   if (currentView == View::kPacketMon) {
     if (pktmonGraphActive()) {
-      const int zone = x / (kScreenWidth / 4);
+      const int zone = x / (kDesignWidth / 4);
       if (zone <= 0) {
         stopPacketMon();
         drawReconMenu();
@@ -325,7 +338,7 @@ void dispatchTouch(int x, int y) {
       } else {
         pktmonToggleGraph();
       }
-    } else if (x >= kScreenWidth / 2) {
+    } else if (x >= kDesignWidth / 2) {
       pktmonToggleGraph();
     } else {
       stopPacketMon();
@@ -373,7 +386,7 @@ void dispatchTouch(int x, int y) {
   }
   if (currentView == View::kRogueWatch) {
     returnToMonitor(1);
-    if (x >= kScreenWidth / 2) drawHome();
+    if (x >= kDesignWidth / 2) drawHome();
     return;
   }
   if (currentView == View::kHiddenReveal) {
@@ -405,8 +418,8 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kSpectrogram) {
-    if (y >= kFooterTop) {
-      const int zone = x / (kScreenWidth / 4);
+    if (y >= kFooterTopDesign) {
+      const int zone = x / (kDesignWidth / 4);
       if (zone <= 0) {
         stopSpectrogram();
         drawReconMenu();
@@ -428,7 +441,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kHarvester) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopHarvester();
       drawReconMenu();
     } else {
@@ -445,7 +458,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kKarmaWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(3);
     } else {
       resetKarmaWatch();
@@ -454,7 +467,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kBeaconWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(4);
     } else {
       resetBeaconWatch();
@@ -463,7 +476,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kAuthFlood) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(5);
     } else {
       resetAuthFlood();
@@ -472,7 +485,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kAdvancedWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(6);
     } else {
       resetAdvancedWatch();
@@ -539,7 +552,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kDeauthMonitor) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(0);
     } else {
       deauthFrameCount = 0;
@@ -551,7 +564,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kDeauthAttack) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopDeauthAttack();
       if (deauthAttackReturnView == View::kDeauthSelect) {
         drawDeauthSelect();
@@ -569,7 +582,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kHandshake) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopHandshakeCapture();
       drawWifiAudit();
     } else {
@@ -593,7 +606,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kWardrive) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopWardrive();
       drawGps();
     } else {
@@ -603,7 +616,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kBeaconFlood) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopBeaconFlood();
       drawAttacksMenu();
     } else if (beaconFloodActive) {
@@ -615,7 +628,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kBleSpamWatch) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       returnToMonitor(2);
     } else {
       bleDetectTotal = 0;
@@ -631,11 +644,11 @@ void dispatchTouch(int x, int y) {
   if (currentView == View::kProbeLure) {
     if (lureSsid.length() == 0) {  // no-target screen: Back -> Attacks, Home
       stopProbeLure();
-      if (x < kScreenWidth / 2) drawAttacksMenu();
+      if (x < kDesignWidth / 2) drawAttacksMenu();
       else drawHome();
       return;
     }
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopProbeLure();
       drawAttacksMenu();
     } else if (probeLureActive) {
@@ -647,7 +660,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kEvilPortal) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       stopEvilPortal();
       drawAttacksMenu();
     } else {
@@ -728,7 +741,7 @@ void dispatchTouch(int x, int y) {
       } else {
         scanBle();
       }
-    } else if (x < kScreenWidth / 2) {
+    } else if (x < kDesignWidth / 2) {
       drawHome();
     } else {
       scanBle();
@@ -736,7 +749,7 @@ void dispatchTouch(int x, int y) {
     return;
   }
   if (currentView == View::kBleDetail) {
-    if (x < kScreenWidth / 2) {
+    if (x < kDesignWidth / 2) {
       drawBleResults();
     } else {
 #ifdef AWOK_GATT_AUDIT
@@ -788,7 +801,7 @@ void dispatchTouch(int x, int y) {
     }
     return;
   }
-  if (x < kScreenWidth / 2) {
+  if (x < kDesignWidth / 2) {
     drawHome();
   } else if (currentView == View::kChannels) {
     scanWifiForChannelMap();
