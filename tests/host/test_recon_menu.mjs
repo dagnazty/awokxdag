@@ -37,7 +37,7 @@ function harness(){
     kReconCategoryCount:cats.length,kReconItemCount:items.length,
     kMenuPerPage:num('kMenuPerPage'),kMenuFirstY:num('kMenuFirstY'),
     kMenuRowPitch:num('kMenuRowPitch'),kMenuRowHeight:num('kMenuRowHeight'),
-    kFooterTop:278,kScreenWidth:240,kBackground:0,kMuted:1,kAccent:2,
+    kFooterTop:278,kFooterTopDesign:278,kScreenWidth:240,kDesignWidth:240,kBackground:0,kMuted:1,kAccent:2,
     display:{fillScreen(){cards.length=buttons.length=0;header=[];}},
     drawHeader:(...a)=>{header=a;},drawReconCard:(...a)=>cards.push(a),
     drawSmallButton:(...a)=>buttons.push(a),

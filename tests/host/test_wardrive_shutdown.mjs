@@ -72,6 +72,7 @@ function shutdownHarness({ headless = false, phase = 'wifi', initialized = true,
     let body = functionBody(source, name);
     body = body.replace(/#ifdef AWOK_HEADLESS\n([\s\S]*?)#else\n([\s\S]*?)#endif/g,
       (_, bridge, screen) => headless ? bridge : screen);
+    body = body.replace(/#ifdef AWOK_GATT_AUDIT\n[\s\S]*?#endif\n/g, '');
     body = body.replace(/NimBLEScan\* scan =/g, 'const scan =')
       .replace(/static_cast<unsigned long>\((\w+)\)/g, '$1')
       .replace(/NimBLEDevice::/g, 'NimBLEDevice.')
