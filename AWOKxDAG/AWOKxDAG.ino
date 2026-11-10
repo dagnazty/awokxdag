@@ -2671,7 +2671,7 @@ void initializeDisplayAndTouch() {
   digitalWrite(AwokPins::kDisplayCs, HIGH);
   digitalWrite(AwokPins::kSdCs, HIGH);
   WsC5::busBegin();          // shared I2C @ 100 kHz (SDA 27 / SCL 26)
-  WsC5::Expander::begin();   // panel power + LCD/TP resets + backlight (PWM 0xFF)
+  WsC5::Expander::begin();   // panel power + LCD/TP resets; backlight stays off
   SPI.begin(AwokPins::kSpiSck, AwokPins::kSpiMiso, AwokPins::kSpiMosi, -1);
   // 80 MHz push clock is HW-verified on this panel (rated 60; holds). Drop toward
   // 40 MHz here if a unit shows SPI artifacts. Reset is -1: the expander did it.
@@ -2724,6 +2724,19 @@ void initializeDisplayAndTouch() {
 #endif
 }
 
+// Called after a full frame has been pushed to the panel. On the Waveshare C5
+// 3.5 the backlight is held off until now so the panel never shows its own
+// memory (static after power-on, the previous picture after reset). The glass
+// lags panel memory by a few frames, hence the short wait. Other boards: no-op.
+static void firstFrameShown() {
+#ifdef AWOK_WAVESHARE_C5_35
+  if (WsC5::Expander::backlightAllowed()) return;
+  delay(150);
+  WsC5::Expander::allowBacklight();
+  setBacklightLit(true);
+#endif
+}
+
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -2769,6 +2782,7 @@ void setup() {
 #endif
   if (!settingFlag(kSettingSkipSplash)) {
     drawBootScreen();  // Mini: splash() pushes to the panel itself
+    firstFrameShown();
     delay(kBootScreenMs);
   }
   initializeSdCard();
@@ -2785,6 +2799,7 @@ void setup() {
   if (sdReady) lastSavedSdWriteOk = exportSavedNetworksToSd();
   drawHome();
   display.present();  // both boards buffer now; blit the first frame
+  firstFrameShown();  // no-op if the splash already lit the panel
 #ifdef AWOK_HEADLESS
   bridgeBleBegin();  // orange bridge: run the BLE GATT server the phone connects
                      // to; commands dispatch locally or relay to the white chip.

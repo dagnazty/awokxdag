@@ -101,15 +101,25 @@ static bool begin() {
   ok &= setBit(kLcdRst, true);  delay(120);
   ok &= setBit(kTpRst, false);  delay(20);
   ok &= setBit(kTpRst, true);   delay(300);  // FT6336 boot
-  ok &= writeReg(kPwmReg, 0xFF);              // backlight full
+  // The backlight stays off here (PWM was zeroed above). Lighting it before the
+  // first frame shows the panel's own memory: static after power-on, the
+  // previous picture after reset. setup() calls allowBacklight() once the first
+  // frame is on the glass.
   s_ready = ok;
   Serial.printf("[ws-c5] expander 0x24 %s\n", ok ? "ready" : "FAILED");
   return ok;
 }
 
-// Backlight duty, 0 (off) .. 255 (full). No-op until begin() has run.
+static bool s_lightAllowed = false;
+
+// Call once, after the first full frame has been pushed to the panel.
+static void allowBacklight() { s_lightAllowed = true; }
+static bool backlightAllowed() { return s_lightAllowed; }
+
+// Backlight duty, 0 (off) .. 255 (full). No-op until begin() has run and the
+// first frame has been drawn (allowBacklight()).
 static void backlight(uint8_t duty) {
-  if (!s_ready) return;
+  if (!s_ready || !s_lightAllowed) return;
   writeReg(kPwmReg, duty);
 }
 }  // namespace Expander
