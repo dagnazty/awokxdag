@@ -17,7 +17,8 @@
      defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V1) + \
      defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V2) + \
      defined(AWOK_DUAL_ESP32_MINI_BRIDGE_V3) + \
-     defined(AWOK_CARDPUTER_V11)) != 1
+     defined(AWOK_CARDPUTER_V11) + \
+     defined(AWOK_WAVESHARE_C5_35)) != 1
 #error "Select exactly one AWOK board profile"
 #endif
 #if defined(AWOK_NM_CYD_C5)
@@ -62,6 +63,18 @@
 // scaleX/scaleY), plus an FT6336 capacitive touch controller on I2C (no
 // resistive XPT2046 chip).
 #if defined(PANCAKE_C5)
+#define PANCAKE_DISPLAY
+#define PANCAKE_CAP_TOUCH
+#endif
+// Waveshare ESP32-C5-Touch-LCD-3.5: the same ST7796 320x480 + FT6336 cap-touch
+// combo as Pancake, so it reuses the ST7796 panel driver (PANCAKE_DISPLAY) and
+// the cap-touch UI coordinate mapping (PANCAKE_CAP_TOUCH). What differs is
+// board-specific and lives behind AWOK_WAVESHARE_C5_35: a CH32V006 I/O expander
+// owns the panel/touch resets and the backlight PWM (there is no backlight
+// GPIO), the FT6336 is INT-gated on the shared I2C bus, GPS is an LC76G over
+// that same I2C bus (not UART), and the AXP2101 PMU is read over raw I2C. See
+// docs/waveshare-c5-35.md and ws_c5_board.h / ws_c5_touch.h.
+#if defined(AWOK_WAVESHARE_C5_35)
 #define PANCAKE_DISPLAY
 #define PANCAKE_CAP_TOUCH
 #endif
@@ -238,7 +251,37 @@ constexpr bool kDualBand = false;
 #else
 constexpr char kChipLabel[] = "ESP32-C5";
 constexpr bool kDualBand = true;
-#if defined(PANCAKE_DISPLAY)
+#if defined(AWOK_WAVESHARE_C5_35)
+// Waveshare ESP32-C5-Touch-LCD-3.5: ST7796 320x480 on an SPI bus shared with the
+// microSD, FT6336 capacitive touch + CH32V006 I/O expander + AXP2101 PMU + LC76G
+// GPS all on ONE shared I2C bus (SDA 27 / SCL 26). Pins are hardware-verified;
+// see docs/waveshare-c5-35.md and the BSP (slickrick773/ESP32-C5-BSP) findings.
+constexpr int kSpiSck = 6;
+constexpr int kSpiMiso = 2;
+constexpr int kSpiMosi = 7;
+constexpr int kDisplayCs = 8;
+constexpr int kDisplayDc = 5;
+constexpr int kDisplayReset = -1;  // ST7796 reset is EXIO1 on the 0x24 expander
+constexpr char kBoardLabel[] = "Waveshare C5 3.5";
+constexpr int kBacklight = -1;     // no backlight GPIO; CH32V006 drives the PWM
+constexpr bool kBacklightOn = true;
+constexpr int kTouchCs = -1;       // FT6336 is I2C-only; no SPI chip select
+constexpr int kSdCs = 9;           // microSD on the shared display SPI bus
+// Shared I2C bus (touch / expander / codec / PMU / GPS all live here).
+constexpr int kI2cSda = 27;
+constexpr int kI2cScl = 26;
+constexpr uint32_t kI2cHz = 100000;  // 100 kHz: robust over the panel flex
+constexpr int kTouchReset = -1;    // FT6336 reset is EXIO0 on the expander
+constexpr int kTouchInt = 3;       // FT6336 INT (TP_INT) gates reads; ext 10K pull-up
+constexpr int kStatusLed = -1;     // NO NeoPixel here: GPIO27 is the I2C SDA line
+// GPS is an LC76G over I2C on the shared bus -- NOT a UART. The J3 header UART is
+// not bonded to the chip, and GPIO13/14 are the native USB D-/D+ lines (a UART
+// there drops the board off USB). kGpsRx/kGpsTx = -1 keeps every UART off pins.
+constexpr int kGpsUart = 1;        // unused: GPS rides I2C (see gps.ino WS branch)
+constexpr int kGpsRx = -1;
+constexpr int kGpsTx = -1;
+constexpr unsigned long kGpsBaud = 115200;  // unused (I2C GPS)
+#elif defined(PANCAKE_DISPLAY)
 // Pancake C5 (ESP32-C5-DevKitC-1 + 3.5" ST7796): shared FSPI bus for TFT + SD,
 // FT6336 capacitive touch on I2C. Pins from ESP32_FlipSocial's Pancake profile
 // (User_Setup_marauder_pancake.h / configs.h).

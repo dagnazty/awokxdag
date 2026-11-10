@@ -24,6 +24,13 @@ T_DONGLE_C5_FQBN = (
     "esp32:esp32:esp32c5:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,"
     "PSRAM=enabled,CDCOnBoot=cdc"
 )
+# Waveshare C5 3.5: 32 MB flash / 8 MB PSRAM, but the C5 FQBN tops out at 16M
+# flash, so 8M/default_8MB (as Pancake). CDCOnBoot=cdc routes Arduino Serial to
+# the native USB-Serial-JTAG port (no UART bridge on this board).
+WS_C5_35_FQBN = (
+    "esp32:esp32:esp32c5:FlashSize=8M,PartitionScheme=default_8MB,"
+    "PSRAM=enabled,CDCOnBoot=cdc"
+)
 
 # Most boards use BLE Observer only. C5 screen boards also use Central for the
 # selected-device GATT auditor; bridge boards use Peripheral and Broadcaster
@@ -66,6 +73,7 @@ PROFILES = {
     "pancake-c5": (C5_FQBN, "PANCAKE_C5"),
     "dual-c5-mini": (C5_FQBN, "AWOK_DUAL_C5_MINI"),
     "nm-cyd-c5": (NM_CYD_C5_FQBN, "AWOK_NM_CYD_C5"),
+    "waveshare-c5-35": (WS_C5_35_FQBN, "AWOK_WAVESHARE_C5_35"),
     "dual-esp32-touch-v1": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V1"),
     "dual-esp32-touch-v2": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V2"),
     "dual-esp32-touch-v3": (CLASSIC_FQBN, "AWOK_DUAL_ESP32_TOUCH_V3"),
@@ -157,7 +165,8 @@ def main():
                         ("cardputer-v11", "lilygo-t-dongle-c5-bridge",
                          "nm-cyd-c5", "cyd-2432s028", "halehound-e32r28t",
                          "halehound-e32r35t", "halehound-nm-rf-hat"),
-        "hardware_tested": args.board in ("dual-c5-touch", "dual-c5-mini"),
+        "hardware_tested": args.board in ("dual-c5-touch", "dual-c5-mini",
+                                          "waveshare-c5-35"),
         "compile_command": command,
         "core": subprocess.check_output(["arduino-cli", "core", "list"], text=True),
         "libraries": subprocess.check_output(["arduino-cli", "lib", "list"], text=True),

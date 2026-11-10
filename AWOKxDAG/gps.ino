@@ -175,17 +175,53 @@ void initGps() {
     gpsLocalZone = AwokTime::zoneByName(saved.c_str());
     preferences.end();
   }
+#if defined(AWOK_WAVESHARE_C5_35)
+  // No UART on this board: the LC76G transport opens the shared I2C bus lazily on
+  // the first read cycle, so there is no baud to apply here.
+  Serial.println("[gps] LC76G over I2C on the shared bus (cmd 0x50 / read 0x54)");
+#else
   const unsigned long baud =
       gpsBaudIsKnown(deviceSettings.gpsBaud) ? deviceSettings.gpsBaud
                                              : AwokPins::kGpsBaud;
   applyGpsBaud(baud, false);
+#endif
 }
 
 void cycleGpsBaud() {
   applyGpsBaud(kGpsBaudOptions[(gpsBaudIndex + 1) % kGpsBaudOptionCount], true);
 }
 
+#if defined(AWOK_WAVESHARE_C5_35)
+// Feed one NMEA byte from the LC76G I2C transport into TinyGPSPlus, keeping the
+// same bookkeeping the UART path does (data-seen flag, raw echo, last sentence).
+static void gpsFeedByte(char c) {
+  gpsDataSeen = true;
+  gpsLastDataMs = millis();
+  gps.encode(c);
+  if (gpsRawEcho) Serial.write(c);
+  if (c == '\n' || c == '\r') {
+    if (gpsLineLen > 0) {
+      const int n = min(gpsLineLen, static_cast<int>(sizeof(gpsLastSentence)) - 1);
+      memcpy(gpsLastSentence, gpsLineBuf, n);
+      gpsLastSentence[n] = 0;
+      gpsLineLen = 0;
+    }
+  } else if (gpsLineLen < static_cast<int>(sizeof(gpsLineBuf)) - 1) {
+    gpsLineBuf[gpsLineLen++] = c;
+  }
+}
+#endif
+
 void updateGps() {
+#if defined(AWOK_WAVESHARE_C5_35)
+  // GPS is an LC76G over the shared I2C bus (no UART). Pump one throttled read
+  // cycle, gated on touch-idle (>=400 ms since lastActivityMs) so a stroke is
+  // never interrupted; each NMEA byte goes into TinyGPSPlus via gpsFeedByte.
+  WsC5::Gps::tick(gpsFeedByte, millis(), lastActivityMs + 400);
+  syncSystemClockFromGps();
+  updateGpsTimezone();
+  return;
+#else
   if (!gpsStarted) return;
   while (gpsSerial.available()) {
     const char c = static_cast<char>(gpsSerial.read());
@@ -206,6 +242,7 @@ void updateGps() {
   }
   syncSystemClockFromGps();
   updateGpsTimezone();
+#endif
 }
 
 bool gpsHasFix() {
@@ -754,7 +791,11 @@ void drawGpsDiagnostics() {
   display.setTextSize(1); display.setTextColor(kAccent, kBackground);
   display.setCursor(scaleX(8), scaleY(50)); display.print(gpsReceptionLabel());
   display.setTextColor(ILI9341_WHITE, kBackground);
+#if defined(AWOK_WAVESHARE_C5_35)
+  display.setCursor(scaleX(8), scaleY(68)); display.printf("LC76G I2C  SDA %d  SCL %d", AwokPins::kI2cSda, AwokPins::kI2cScl);
+#else
   display.setCursor(scaleX(8), scaleY(68)); display.printf("UART%d  RX %d  TX %d", AwokPins::kGpsUart, AwokPins::kGpsRx, AwokPins::kGpsTx);
+#endif
   display.setCursor(scaleX(8), scaleY(84)); display.printf("Chars %lu | valid %lu", (unsigned long)gps.charsProcessed(), (unsigned long)passed);
   display.setCursor(scaleX(8), scaleY(100)); display.printf("This baud %lu | bad %lu", (unsigned long)passedHere, (unsigned long)gps.failedChecksum());
   display.setCursor(scaleX(8), scaleY(116)); display.print("Last: " + clipped(String(gpsLastSentence), 30));

@@ -82,6 +82,12 @@ void writeBacklightPercent(int percent) {
   M5Cardputer.Display.setBrightness(constrain(percent, 0, 100) * 255 / 100);
   return;
 #endif
+#if defined(AWOK_WAVESHARE_C5_35)
+  // No backlight GPIO: brightness is a PWM-register write on the CH32V006
+  // expander (TFT_BL = -1 without this path means full brightness, no dimming).
+  WsC5::Expander::backlight(static_cast<uint8_t>(constrain(percent, 0, 100) * 255 / 100));
+  return;
+#endif
   const int pin = AwokPins::kBacklight;
   if (pin < 0) return;  // headless bridge has no panel backlight
   // Track whether LEDC currently owns the pin. Full on/off use plain GPIO so
