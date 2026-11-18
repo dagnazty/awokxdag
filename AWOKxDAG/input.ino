@@ -326,9 +326,24 @@ void dispatchTouch(int x, int y) {
   }
   if (y < kFooterTopDesign) return;
   if (currentView == View::kPacketMon) {
-    stopPacketMon();
-    if (x < kDesignWidth / 2) drawReconMenu();  // Back -> Recon
-    else drawHome();                            // Home
+    if (pktmonGraphActive()) {
+      const int zone = x / (kDesignWidth / 4);
+      if (zone <= 0) {
+        stopPacketMon();
+        drawReconMenu();
+      } else if (zone == 1) {
+        pktmonGraphStep(-1);
+      } else if (zone == 2) {
+        pktmonGraphStep(1);
+      } else {
+        pktmonToggleGraph();
+      }
+    } else if (x >= kDesignWidth / 2) {
+      pktmonToggleGraph();
+    } else {
+      stopPacketMon();
+      drawReconMenu();
+    }
     return;
   }
   if (currentView == View::kCameraScan) {
