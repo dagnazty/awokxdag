@@ -1,5 +1,23 @@
 # Third-party references and notices
 
+## Waveshare ESP32-C5-Touch-LCD-3.5 hardware references — ESP32-C5-BSP and GhostESP
+
+The `AWOK_WAVESHARE_C5_35` profile uses hardware-verified board-interface facts
+from the [ESP32-C5-BSP](https://github.com/slickrick773/ESP32-C5-BSP): the
+display/touch/SD pin map, the shared-I²C bus discipline (per-read re-open and the
+saved/restored bus timeout), the CH32V006 expander bring-up (panel power, panel
+and touch resets, backlight PWM), the FT6336 INT-gating fix, the LC76G-over-I²C
+GPS transport, and the raw-I²C AXP2101 fuel-gauge registers. The same board's
+[GhostESP #433](https://github.com/GhostESP-Revival/GhostESP/pull/433) was
+consulted as an independent working-hardware reference for the expander register
+sequence and the SPI/I²C pin map, and the
+[official Waveshare schematic](https://github.com/waveshareteam/ESP32-C5-Touch-LCD-3.5)
+for the pin map and EXIO assignments.
+
+AxD's display wrapper, board profile, expander/GPS/battery helpers, build
+integration, UI, and feature code are its own implementation; source bodies from
+those projects were not copied.
+
 ## NM-CYD-C5 hardware references — RockBase IoT and CYM
 
 The `AWOK_NM_CYD_C5` profile uses factual board-interface information from the

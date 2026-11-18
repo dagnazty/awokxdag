@@ -82,7 +82,12 @@ bool radiosCoexist = true;
 #endif
 #ifdef PANCAKE_DISPLAY
 #include "pancake_display.h"    // native 320x480 ST7796 buffer (UI scaled via scaleX/scaleY)
+#if defined(AWOK_WAVESHARE_C5_35)
+#include "ws_c5_board.h"        // shared-I2C discipline, CH32V006 expander, LC76G GPS, AXP2101
+#include "ws_c5_touch.h"        // INT-gated FT6336 (drop-in for pancake_touch.h)
+#else
 #include "pancake_touch.h"      // FT6336 capacitive controller (I2C)
+#endif
 #else
 #include "touch_display.h"     // buffered ILI9341 wrapper (kills refresh flicker)
 #endif

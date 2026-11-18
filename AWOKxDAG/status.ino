@@ -32,6 +32,18 @@ void drawStatus() {
   display.setCursor(scaleX(6), scaleY(y));
   display.print("Power: ");
   display.setTextColor(ILI9341_WHITE, kBackground);
+#if defined(AWOK_WAVESHARE_C5_35)
+  // AXP2101 PMU over raw I2C: show the gauge percent when a cell is fitted, else
+  // note it is USB-powered. refresh() re-opens the shared bus (C5 read quirk).
+  WsC5::Battery::refresh();
+  if (!WsC5::Battery::present()) {
+    display.print("no PMU");
+  } else if (WsC5::Battery::hasCell() && WsC5::Battery::percent() >= 0) {
+    display.printf("%d%%", WsC5::Battery::percent());
+  } else {
+    display.print("USB");  // PMU answers but no cell on the MX1.25 header
+  }
+#else
   if (AwokPins::kBatteryAdc >= 0) {
     const int mv = analogReadMilliVolts(AwokPins::kBatteryAdc);
     display.printf("%.2f V", mv * AwokPins::kBatteryDivider / 1000.0f);
@@ -41,6 +53,7 @@ void drawStatus() {
     // and no percentage to show. Just report that the board is powered.
     display.print("ON");
   }
+#endif
   y += step;
 
   display.setTextColor(kMuted, kBackground);
