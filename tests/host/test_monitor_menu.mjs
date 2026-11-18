@@ -29,7 +29,7 @@ function harness(){
   const calls=[],cards=[],buttons=[];
   const c=vm.createContext({String,max:Math.max,min:Math.min,monitorCategory:-1,monitorPage:0,
     kMonitorItemCount:8,kMonitorPerPage:PERPAGE,kMenuFirstY:FIRST,kMenuRowPitch:PITCH,kMenuCardHeight:CARDH,
-    kScreenWidth:240,kBackground:0,kMuted:1,kAccent:2,kGood:KGOOD,
+    kScreenWidth:240,kDesignWidth:240,kBackground:0,kMuted:1,kAccent:2,kGood:KGOOD,
     View:{kMonitor:'monitor'},drawHeader:(...a)=>calls.push(['header',...a]),
     drawMenuCard:(...a)=>cards.push(a),drawSmallButton:(...a)=>buttons.push(a),
     drawHome:()=>calls.push(['home']),display:{fillScreen(){cards.length=buttons.length=0;}},
@@ -138,7 +138,7 @@ test('existing Reset, forensic Clear/Export/paging, and Rogue Home actions are p
   assert.equal(t.c.rogueWatchActive,false);assert.equal(t.calls.at(-1)[0],'home');
 });
 test('menu body dispatch precedes footer gate and every detector uses matching state and Stop label',()=>{
-  assert.ok(input.indexOf('handleMonitorTouch(x, y)')<input.indexOf('if (y < kFooterTop) return;'));
+  assert.ok(input.indexOf('handleMonitorTouch(x, y)')<input.indexOf('if (y < kFooterTopDesign) return;'));
   assert.match(main,/case kHomeMonitor: openMonitorMenu\(\);/);  // Home tile still opens Monitor
   const files=['deauth','roguewatch','bledetect','karmawatch','beaconwatch','authflood','advancedwatch','deauthforensics'];
   for(let i=0;i<8;i++){

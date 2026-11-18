@@ -41,7 +41,7 @@ function harness(){
   const c=vm.createContext({String,max:Math.max,min:Math.min,
     homePage:0,homeOverlay:false,reconCategory:0,reconPage:9,sdReady:true,
     currentView:'kHome',View:{kHome:'kHome',kScreenTest:'kScreenTest'},
-    kScreenWidth:240,kFooterTop:278,
+    kScreenWidth:240,kFooterTop:278,kDesignWidth:240,kFooterTopDesign:278,
     kHomeTilesPerPage:num('kHomeTilesPerPage'),kHomeFirstY:num('kHomeFirstY'),
     kHomeRowPitch:num('kHomeRowPitch'),kHomeTileHeight:cardH,
     kHomeTileCount:tiles.length,kHomeTiles:tiles,kVersion:'1.7.4',

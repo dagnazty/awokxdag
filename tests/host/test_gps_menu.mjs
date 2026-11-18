@@ -95,7 +95,7 @@ test('GPS and Link body controls dispatch before the generic footer-only gate',(
   const input=readFileSync(new URL('../../AWOKxDAG/input.ino',import.meta.url),'utf8');
   const main=readFileSync(new URL('../../AWOKxDAG/AWOKxDAG.ino',import.meta.url),'utf8');
   for(const route of ['handleGpsTouch(x, y)','handleLinkWardriveTouch(x, y)']) {
-    assert.ok(input.indexOf(route)>0);assert.ok(input.indexOf(route)<input.indexOf('if (y < kFooterTop) return;'));
+    assert.ok(input.indexOf(route)>0);assert.ok(input.indexOf(route)<input.indexOf('if (y < kFooterTopDesign) return;'));
   }
   assert.match(main,/lastGpsScreenDrawMs = millis\(\);\s+redrawGpsPage\(\);/);
 });
