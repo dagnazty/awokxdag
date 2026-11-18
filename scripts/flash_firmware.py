@@ -33,13 +33,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 # Chip family per board profile (mirrors build_firmware.py's FQBNs).
-C5 = ("dual-c5-touch", "dual-c5-mini", "dual-c5-bridge", "nm-cyd-c5",
+C5 = ("dual-c5-touch", "dual-c5-mini", "marauder-mini-v3", "dual-c5-bridge", "nm-cyd-c5",
       "lilygo-t-dongle-c5-bridge")
 CHIP = {b: ("esp32c5" if b in C5 else "esp32s3" if b == "cardputer-v11"
             else "esp32") for b in (
     "cardputer-v11", "lilygo-t-dongle-c5-bridge",
-    "dual-c5-touch", "dual-c5-mini", "dual-c5-bridge", "nm-cyd-c5",
-    "cyd-2432s028", "halehound-e32r28t", "halehound-e32r35t",
+    "dual-c5-touch", "dual-c5-mini", "marauder-mini-v3", "dual-c5-bridge",
+    "nm-cyd-c5", "cyd-2432s028", "halehound-e32r28t", "halehound-e32r35t",
     "halehound-nm-rf-hat",
     "dual-esp32-touch-v1", "dual-esp32-touch-v2", "dual-esp32-touch-v3",
     "dual-esp32-mini-v1", "dual-esp32-mini-v2", "dual-esp32-mini-v3",

@@ -1,6 +1,7 @@
 // Arduino IDE selection.
 #if !defined(AWOK_DUAL_C5_TOUCH) && !defined(PANCAKE_C5) && \
     !defined(AWOK_DUAL_C5_MINI) && \
+    !defined(AWOK_MARAUDER_MINI_V3) && \
     !defined(AWOK_NM_CYD_C5) && \
     !defined(AWOK_CYD_2432S028) && !defined(AWOK_HALEHOUND_E32R28T) && \
     !defined(AWOK_HALEHOUND_E32R35T) && !defined(AWOK_HALEHOUND_NM_RF_HAT) && \

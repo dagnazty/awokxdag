@@ -11,7 +11,7 @@ struct MiniLayout {
   static constexpr int columns = 37, visible = 10, pitch = 10, bodyTop = 15;
 #else
   static constexpr int width = 128, height = 128;
-  static constexpr int columns = 19, visible = 9, pitch = 11, bodyTop = 15;
+  static constexpr int columns = 19, visible = 8, pitch = 11, bodyTop = 25;
 #endif
   static constexpr int maxItems = 96, maxLines = 512, textBytes = 96;
   enum Kind : uint8_t { text, bar, graph };
@@ -136,7 +136,25 @@ struct MiniLayout {
     if (focus >= top + visible) top = focus - visible + 1;
     top = std::max(0, std::min(top, std::max(0, lineCount - visible)));
   }
-  void move(int amount) { focus += amount; constrainFocus(); }
+  void move(int amount) {
+    const int step = amount >= 0 ? 1 : -1;
+    int steps = amount >= 0 ? amount : -amount;
+    bool anyAction = false;
+    for (int i = 0; i < lineCount; ++i)
+      if (items[lines[i].item].action()) { anyAction = true; break; }
+    int f = focus;
+    while (steps > 0) {
+      const int n = f + step;
+      if (n < 0 || n >= lineCount) break;
+      f = n;
+      if (!anyAction || items[lines[f].item].action()) --steps;
+    }
+    if (anyAction && f >= 0 && f < lineCount && !items[lines[f].item].action())
+      for (int n = f; n >= 0 && n < lineCount; n -= step)
+        if (items[lines[n].item].action()) { f = n; break; }
+    focus = f;
+    constrainFocus();
+  }
   // Right selects footer actions quickly; left returns to the first body row.
   void jump(bool footer) {
     focus = 0;
